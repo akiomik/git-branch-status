@@ -1,6 +1,6 @@
 # git-branch-status
 
-A command for displaying git branch colored by status.
+A command line tool for displaying git branch colored by status, like zsh's [vcs_info](https://zsh.sourceforge.io/Doc/Release/User-Contributions.html#Version-Control-Information).
 
 ![screenshot](screenshot.png?raw=true)
 
