@@ -32,9 +32,15 @@ fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
         if s.status().is_conflicted() {
             BranchStatus::Conflicted
         } else if s.status().is_wt_new() || s.status().is_wt_modified() || s.status().is_wt_deleted() || s.status().is_wt_typechange() || s.status().is_wt_renamed() {
-            BranchStatus::Unstaged
+            match acc {
+                BranchStatus::Conflicted => acc,
+                _                        => BranchStatus::Unstaged,
+            }
         } else if s.status().is_index_new() || s.status().is_index_modified() || s.status().is_index_deleted() || s.status().is_index_typechange() || s.status().is_index_renamed() {
-            BranchStatus::Staged
+            match acc {
+                BranchStatus::NotChanged => BranchStatus::Staged,
+                _                        => acc,
+            }
         } else {
             acc
         }
