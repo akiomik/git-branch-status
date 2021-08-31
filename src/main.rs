@@ -1,3 +1,6 @@
+extern crate clap;
+
+use clap::{Arg, App};
 use git2::{Error, ErrorCode, Repository};
 use ansi_term::Colour::{Green, Red, Yellow};
 
@@ -50,6 +53,18 @@ fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
 }
 
 fn main() {
+    let matches = App::new("git-branch-status")
+                      .version("0.1.0")
+                      .author("Akiomi Kamakura <akiomik@gmail.com>")
+                      .about("Show colored git branch name by status")
+                      .arg(Arg::with_name("mode")
+                           .short("m")
+                           .long("mode")
+                           .value_name("MODE")
+                           .help("Sets a mode. Currently, `stdout` and `zsh` are supported)")
+                           .takes_value(true))
+                      .get_matches();
+
     let repo = match Repository::discover(".") {
         Ok(repo) => repo,
         Err(_)   => std::process::exit(1),
@@ -65,10 +80,24 @@ fn main() {
         Err(e)     => panic!("failed to get branch status: {}", e),
     };
 
-    match status {
-        BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
-        BranchStatus::Staged     => print!("{}", Yellow.paint(branch)),
-        BranchStatus::Unstaged   => print!("{}", Red.paint(branch)),
-        BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
+    let mode = matches.value_of("mode").unwrap_or("stdout");
+    match mode {
+        "zsh" => {
+            match status {
+                BranchStatus::NotChanged => print!("%F{{green}}{}%f", branch),
+                BranchStatus::Staged     => print!("%F{{yellow}}{}%f", branch),
+                BranchStatus::Unstaged   => print!("%F{{red}}{}%f", branch),
+                BranchStatus::Conflicted => print!("%F{{red}}{}%f", branch),
+            };
+        },
+        "stdout" => {
+            match status {
+                BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
+                BranchStatus::Staged     => print!("{}", Yellow.paint(branch)),
+                BranchStatus::Unstaged   => print!("{}", Red.paint(branch)),
+                BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
+            };
+        },
+        _ => panic!("unsupported mode is specified: {}", mode),
     };
 }
