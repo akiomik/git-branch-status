@@ -1,9 +1,10 @@
 extern crate clap;
 
 use clap::{Arg, App};
-use git2::{Error, ErrorCode, Repository};
+use git2::{Error, ErrorCode, Repository, StatusEntry};
 use ansi_term::Colour::{Green, Red, Yellow};
 
+#[derive(PartialEq, PartialOrd)]
 enum BranchStatus {
     NotChanged,
     Staged,
@@ -25,29 +26,35 @@ fn get_branch_of(repo: &Repository) -> Result<String, Error> {
     Ok(branch.to_string())
 }
 
+fn is_conflicted(s: &StatusEntry) -> bool {
+    s.status().is_conflicted()
+}
+
+fn is_unstaged(s: &StatusEntry) -> bool {
+    s.status().is_wt_new() || s.status().is_wt_modified() || s.status().is_wt_deleted() || s.status().is_wt_typechange() || s.status().is_wt_renamed()
+}
+
+fn is_staged(s: &StatusEntry) -> bool {
+    s.status().is_index_new() || s.status().is_index_modified() || s.status().is_index_deleted() || s.status().is_index_typechange() || s.status().is_index_renamed()
+}
+
 fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
     let stats = match repo.statuses(None) {
         Ok(stats) => stats,
         Err(e)    => return Err(e),
     };
 
-    let status = stats.iter().fold(BranchStatus::NotChanged, |acc, s|
-        if s.status().is_conflicted() {
+    let status = stats.iter().fold(BranchStatus::NotChanged, |acc, s| {
+        if acc < BranchStatus::Conflicted && is_conflicted(&s) {
             BranchStatus::Conflicted
-        } else if s.status().is_wt_new() || s.status().is_wt_modified() || s.status().is_wt_deleted() || s.status().is_wt_typechange() || s.status().is_wt_renamed() {
-            match acc {
-                BranchStatus::Conflicted => acc,
-                _                        => BranchStatus::Unstaged,
-            }
-        } else if s.status().is_index_new() || s.status().is_index_modified() || s.status().is_index_deleted() || s.status().is_index_typechange() || s.status().is_index_renamed() {
-            match acc {
-                BranchStatus::NotChanged => BranchStatus::Staged,
-                _                        => acc,
-            }
+        } else if acc < BranchStatus::Unstaged && is_unstaged(&s) {
+            BranchStatus::Unstaged
+        } else if acc < BranchStatus::Staged && is_staged(&s) {
+            BranchStatus::Staged
         } else {
             acc
         }
-    );
+    });
 
     Ok(status)
 }
