@@ -22,7 +22,7 @@ fn get_branch_of(repo: &Repository) -> Result<String, Error> {
 
     let branch = head.as_ref().and_then(|h| h.shorthand()).unwrap_or("HEAD (no branch)");
 
-    return Ok(branch.to_string());
+    Ok(branch.to_string())
 }
 
 fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
@@ -49,7 +49,7 @@ fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
         }
     );
 
-    return Ok(status);
+    Ok(status)
 }
 
 fn main() {
