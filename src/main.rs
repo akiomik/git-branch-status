@@ -63,7 +63,7 @@ fn main() {
     let matches = App::new("git-branch-status")
                       .version("0.1.0")
                       .author("Akiomi Kamakura <akiomik@gmail.com>")
-                      .about("Show colored git branch name by status")
+                      .about("Show git branch name colored by status")
                       .arg(Arg::with_name("mode")
                            .short("m")
                            .long("mode")
