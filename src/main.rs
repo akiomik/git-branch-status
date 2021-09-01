@@ -30,8 +30,9 @@ fn is_conflicted(s: &StatusEntry) -> bool {
     s.status().is_conflicted()
 }
 
+// ignores is_wt_new
 fn is_unstaged(s: &StatusEntry) -> bool {
-    s.status().is_wt_new() || s.status().is_wt_modified() || s.status().is_wt_deleted() || s.status().is_wt_typechange() || s.status().is_wt_renamed()
+    s.status().is_wt_modified() || s.status().is_wt_deleted() || s.status().is_wt_typechange() || s.status().is_wt_renamed()
 }
 
 fn is_staged(s: &StatusEntry) -> bool {
