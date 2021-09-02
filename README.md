@@ -23,3 +23,21 @@ Add the following to `~/.zshrc`:
 setopt prompt_subst
 RPROMPT='$(git branch-status --mode zsh)'
 ```
+
+## Benchmark
+
+Run `./scripts/bench.sh`. `git-branch-status` is about 3.3x faster than `vcs_info`.
+
+```sh
+❯ ./scripts/bench.sh
+Setup vcs_info...done!
+Setup git-branch-status...done!
+
+Run 'vcs_info; echo $vcs_info_msg_0_' 100 times
+....................................................................................................done!
+Elapsed time: 6793ms
+
+Run './target/release/git-branch-status --mode zsh' 100 times
+....................................................................................................done!
+Elapsed time: 2002ms
+```
