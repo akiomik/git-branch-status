@@ -2,7 +2,7 @@ extern crate clap;
 
 use ansi_term::Colour::{Green, Red, Yellow};
 use clap::{App, Arg};
-use git2::{Error, ErrorCode, Repository, StatusEntry};
+use git2::{Error, ErrorCode, Repository, StatusEntry, StatusOptions};
 
 #[derive(PartialEq, PartialOrd)]
 enum BranchStatus {
@@ -50,7 +50,13 @@ fn is_staged(s: &StatusEntry) -> bool {
 }
 
 fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
-    let stats = match repo.statuses(None) {
+    let mut opts = StatusOptions::new();
+    opts.include_untracked(false)
+        .include_ignored(false)
+        .include_unmodified(false)
+        .exclude_submodules(true);
+
+    let stats = match repo.statuses(Some(&mut opts)) {
         Ok(stats) => stats,
         Err(e) => return Err(e),
     };
