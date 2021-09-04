@@ -2,79 +2,10 @@ extern crate clap;
 
 use ansi_term::Colour::{Green, Red, Yellow};
 use clap::{App, Arg};
-use git2::{Error, ErrorCode, Repository, StatusEntry, StatusOptions};
+use git2::Repository;
 
-#[derive(PartialEq, PartialOrd)]
-enum BranchStatus {
-    NotChanged,
-    Staged,
-    Unstaged,
-    Conflicted,
-}
-
-fn get_branch_of(repo: &Repository) -> Result<String, Error> {
-    let head = match repo.head() {
-        Ok(head) => Some(head),
-        Err(ref e) if e.code() == ErrorCode::UnbornBranch || e.code() == ErrorCode::NotFound => {
-            None
-        }
-        Err(e) => return Err(e),
-    };
-
-    let branch = head
-        .as_ref()
-        .and_then(|h| h.shorthand())
-        .unwrap_or("HEAD (no branch)");
-
-    Ok(branch.to_string())
-}
-
-fn is_conflicted(s: &StatusEntry) -> bool {
-    s.status().is_conflicted()
-}
-
-// ignores is_wt_new
-fn is_unstaged(s: &StatusEntry) -> bool {
-    s.status().is_wt_modified()
-        || s.status().is_wt_deleted()
-        || s.status().is_wt_typechange()
-        || s.status().is_wt_renamed()
-}
-
-fn is_staged(s: &StatusEntry) -> bool {
-    s.status().is_index_new()
-        || s.status().is_index_modified()
-        || s.status().is_index_deleted()
-        || s.status().is_index_typechange()
-        || s.status().is_index_renamed()
-}
-
-fn get_branch_status_of(repo: &Repository) -> Result<BranchStatus, Error> {
-    let mut opts = StatusOptions::new();
-    opts.include_untracked(false)
-        .include_ignored(false)
-        .include_unmodified(false)
-        .exclude_submodules(true);
-
-    let stats = match repo.statuses(Some(&mut opts)) {
-        Ok(stats) => stats,
-        Err(e) => return Err(e),
-    };
-
-    let status = stats.iter().fold(BranchStatus::NotChanged, |acc, s| {
-        if acc < BranchStatus::Conflicted && is_conflicted(&s) {
-            BranchStatus::Conflicted
-        } else if acc < BranchStatus::Unstaged && is_unstaged(&s) {
-            BranchStatus::Unstaged
-        } else if acc < BranchStatus::Staged && is_staged(&s) {
-            BranchStatus::Staged
-        } else {
-            acc
-        }
-    });
-
-    Ok(status)
-}
+use git_branch_status::branch_status::BranchStatus;
+use git_branch_status::repository_ext::RepositoryExt;
 
 fn main() {
     let matches = App::new("git-branch-status")
@@ -96,12 +27,12 @@ fn main() {
         Err(_) => std::process::exit(1),
     };
 
-    let branch = match get_branch_of(&repo) {
+    let branch = match repo.branch_name() {
         Ok(branch) => branch,
         Err(e) => panic!("failed to get branch: {}", e),
     };
 
-    let status = match get_branch_status_of(&repo) {
+    let status = match repo.branch_status() {
         Ok(status) => status,
         Err(e) => panic!("failed to get branch status: {}", e),
     };
