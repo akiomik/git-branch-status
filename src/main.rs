@@ -31,7 +31,7 @@ fn main() {
                 .short("m")
                 .long("mode")
                 .value_name("MODE")
-                .help("Sets a mode. Currently, `stdout` and `zsh` are supported)")
+                .help("Sets a mode. Currently, `stdout` and `zsh` are supported")
                 .takes_value(true),
         )
         .get_matches();
