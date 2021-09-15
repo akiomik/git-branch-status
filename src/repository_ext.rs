@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use git2::{Error, ErrorCode, Repository, StatusOptions};
+use git2::{Error, ErrorCode, Repository, RepositoryState, StatusOptions};
 
 use crate::branch_status::BranchStatus;
 use crate::status_entry_ext::StatusEntryExt;
@@ -39,7 +39,13 @@ impl RepositoryExt for Repository {
             .and_then(|h| h.shorthand())
             .unwrap_or("HEAD (no branch)");
 
-        Ok(branch.to_string())
+        let action = match self.state() {
+            RepositoryState::RebaseInteractive => ":rebase",
+            RepositoryState::Merge => ":merge",
+            _ => "",
+        };
+
+        Ok(branch.to_string() + action)
     }
 
     fn branch_status(&self) -> Result<BranchStatus, Error> {
