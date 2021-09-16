@@ -18,11 +18,21 @@ use crate::branch_status::BranchStatus;
 use crate::status_entry_ext::StatusEntryExt;
 
 pub trait RepositoryExt {
+    fn action(&self) -> Option<&str>;
     fn branch_name(&self) -> Result<String, Error>;
     fn branch_status(&self) -> Result<BranchStatus, Error>;
 }
 
 impl RepositoryExt for Repository {
+    fn action(&self) -> Option<&str> {
+        match self.state() {
+            RepositoryState::CherryPick => Some("cherry-pick"),
+            RepositoryState::Merge => Some("merge"),
+            RepositoryState::RebaseInteractive => Some("rebase"),
+            _ => None,
+        }
+    }
+
     fn branch_name(&self) -> Result<String, Error> {
         let head = match self.head() {
             Ok(head) => Some(head),
@@ -39,13 +49,10 @@ impl RepositoryExt for Repository {
             .and_then(|h| h.shorthand())
             .unwrap_or("HEAD (no branch)");
 
-        let action = match self.state() {
-            RepositoryState::RebaseInteractive => ":rebase",
-            RepositoryState::Merge => ":merge",
-            _ => "",
-        };
-
-        Ok(branch.to_string() + action)
+        match self.action() {
+            Some(action) => Ok(branch.to_string() + ":" + action),
+            None => Ok(branch.to_string()),
+        }
     }
 
     fn branch_status(&self) -> Result<BranchStatus, Error> {
