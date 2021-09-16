@@ -26,9 +26,17 @@ pub trait RepositoryExt {
 impl RepositoryExt for Repository {
     fn action(&self) -> Option<&str> {
         match self.state() {
-            RepositoryState::CherryPick => Some("cherry-pick"),
+            RepositoryState::ApplyMailbox => Some("am"),
+            RepositoryState::ApplyMailboxOrRebase => Some("am/rebase"),
+            RepositoryState::Bisect => Some("bisect"),
+            RepositoryState::CherryPick => Some("cherry"),
+            RepositoryState::CherryPickSequence => Some("cherry-seq"),
             RepositoryState::Merge => Some("merge"),
-            RepositoryState::RebaseInteractive => Some("rebase"),
+            RepositoryState::Rebase => Some("rebase"),
+            RepositoryState::RebaseInteractive => Some("rebase-i"),
+            RepositoryState::RebaseMerge => Some("rebase-m"),
+            RepositoryState::Revert => Some("revert"),
+            RepositoryState::RevertSequence => Some("revert-seq"),
             _ => None,
         }
     }
