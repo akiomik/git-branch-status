@@ -40,8 +40,9 @@ impl RepositoryExt for Repository {
             .unwrap_or("HEAD (no branch)");
 
         let action = match self.state() {
-            RepositoryState::RebaseInteractive => ":rebase",
+            RepositoryState::CherryPick => ":cherry-pick",
             RepositoryState::Merge => ":merge",
+            RepositoryState::RebaseInteractive => ":rebase",
             _ => "",
         };
 
