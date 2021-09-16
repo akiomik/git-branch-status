@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fs;
+
 use git2::{Error, ErrorCode, Repository, RepositoryState, StatusOptions};
 
 use crate::branch_status::BranchStatus;
@@ -21,6 +23,7 @@ pub trait RepositoryExt {
     fn action(&self) -> Option<&str>;
     fn branch_name(&self) -> Result<String, Error>;
     fn branch_status(&self) -> Result<BranchStatus, Error>;
+    fn rebase_i_head_name(&self) -> Result<String, Error>;
 }
 
 impl RepositoryExt for Repository {
@@ -52,10 +55,17 @@ impl RepositoryExt for Repository {
             Err(e) => return Err(e),
         };
 
-        let branch = head
-            .as_ref()
-            .and_then(|h| h.shorthand())
-            .unwrap_or("HEAD (no branch)");
+        let branch = if self.state() == RepositoryState::RebaseInteractive {
+            match self.rebase_i_head_name() {
+                Ok(name) => name,
+                Err(e) => return Err(e),
+            }
+        } else {
+            head.as_ref()
+                .and_then(|h| h.shorthand())
+                .unwrap_or("HEAD (no branch)")
+                .to_string()
+        };
 
         match self.action() {
             Some(action) => Ok(branch.to_string() + ":" + action),
@@ -88,5 +98,19 @@ impl RepositoryExt for Repository {
         });
 
         Ok(status)
+    }
+
+    fn rebase_i_head_name(&self) -> Result<String, Error> {
+        let path = self.path().join("rebase-merge").join("head-name");
+
+        let refname = match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(e) => return Err(Error::from_str(&e.to_string())),
+        };
+
+        match self.find_reference(&refname.trim()) {
+            Ok(ref reference) => Ok(reference.shorthand().unwrap_or(&refname).to_string()),
+            Err(e) => return Err(e),
+        }
     }
 }
