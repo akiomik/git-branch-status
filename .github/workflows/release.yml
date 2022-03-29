@@ -20,7 +20,8 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
 
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -33,18 +34,20 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: sudo apt-get install libssl-dev
-        if: matrix.os == 'ubuntu-latest'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true 
-          command: build
-          args: --release --target ${{ matrix.target }} --all-features
+      # - run: sudo apt-get install g++-arm-linux-gnueabihf
+      #   if: matrix.os == 'ubuntu-latest'
+      # - uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: stable
+      #     target: ${{ matrix.target }}
+      #     override: true
+      # - uses: actions-rs/cargo@v1
+      #   with:
+      #     use-cross: true
+      #     command: build
+      #     args: --release --target ${{ matrix.target }} --all-features
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release --target ${{ matrix.target }}
       - uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
