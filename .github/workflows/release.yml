@@ -34,6 +34,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: |
+        export OPENSSL_LIB_DIR=`dpkg -L libssl-dev | grep lib`
+        export OPENSSL_INCLUDE_DIR=`dpkg -L libssl-dev | grep include`
+        echo OPENSSL_LIB_DIR
+        echo OPENSSL_INCLUDE_DIR
       # - run: sudo apt-get install g++-arm-linux-gnueabihf
       #   if: matrix.os == 'ubuntu-latest'
       # - uses: actions-rs/toolchain@v1
