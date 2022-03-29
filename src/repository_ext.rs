@@ -14,7 +14,7 @@
 
 use std::fs;
 
-use git2::{Error, ErrorCode, Repository, RepositoryState, StatusOptions};
+use git2::{Error, ErrorCode, Oid, Repository, RepositoryState, StatusOptions};
 
 use crate::branch_status::BranchStatus;
 use crate::status_entry_ext::StatusEntryExt;
@@ -24,6 +24,7 @@ pub trait RepositoryExt {
     fn branch_name(&self) -> Result<String, Error>;
     fn branch_status(&self) -> Result<BranchStatus, Error>;
     fn rebase_i_head_name(&self) -> Result<String, Error>;
+    fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error>;
 }
 
 impl RepositoryExt for Repository {
@@ -55,11 +56,25 @@ impl RepositoryExt for Repository {
             Err(e) => return Err(e),
         };
 
+        let detached = match self.head_detached() {
+            Ok(detached) => detached,
+            Err(e) => return Err(e),
+        };
+
         let branch = if self.state() == RepositoryState::RebaseInteractive {
             match self.rebase_i_head_name() {
                 Ok(name) => name,
                 Err(e) => return Err(e),
             }
+        } else if detached {
+            let oid = head.as_ref().and_then(|h| h.target());
+            let short = match oid.and_then(|oid| Some(self.to_short_oid(oid))) {
+                Some(Ok(id)) => id,
+                Some(Err(e)) => return Err(e),
+                None => None,
+            };
+
+            short.unwrap_or("HEAD (detached)".to_string())
         } else {
             head.as_ref()
                 .and_then(|h| h.shorthand())
@@ -111,6 +126,17 @@ impl RepositoryExt for Repository {
         match self.find_reference(&refname.trim()) {
             Ok(ref reference) => Ok(reference.shorthand().unwrap_or(&refname).to_string()),
             Err(e) => return Err(e),
+        }
+    }
+
+    fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error> {
+        let object = match self.find_object(oid, None) {
+            Ok(object) => object,
+            Err(e) => return Err(e),
+        };
+        match object.short_id() {
+            Ok(id) => Ok(id.as_str().and_then(|i| Some(i.to_string()))),
+            Err(e) => Err(e),
         }
     }
 }
