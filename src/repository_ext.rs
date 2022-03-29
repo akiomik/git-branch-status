@@ -68,13 +68,13 @@ impl RepositoryExt for Repository {
             }
         } else if detached {
             let oid = head.as_ref().and_then(|h| h.target());
-            let short = match oid.and_then(|oid| Some(self.to_short_oid(oid))) {
+            let short = match oid.map(|oid| self.to_short_oid(oid)) {
                 Some(Ok(id)) => id,
                 Some(Err(e)) => return Err(e),
                 None => None,
             };
 
-            short.unwrap_or("HEAD (detached)".to_string())
+            short.unwrap_or_else(|| "HEAD (detached)".to_string())
         } else {
             head.as_ref()
                 .and_then(|h| h.shorthand())
@@ -83,8 +83,8 @@ impl RepositoryExt for Repository {
         };
 
         match self.action() {
-            Some(action) => Ok(branch.to_string() + ":" + action),
-            None => Ok(branch.to_string()),
+            Some(action) => Ok(branch + ":" + action),
+            None => Ok(branch),
         }
     }
 
@@ -123,9 +123,9 @@ impl RepositoryExt for Repository {
             Err(e) => return Err(Error::from_str(&e.to_string())),
         };
 
-        match self.find_reference(&refname.trim()) {
+        match self.find_reference(refname.trim()) {
             Ok(ref reference) => Ok(reference.shorthand().unwrap_or(&refname).to_string()),
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
@@ -135,7 +135,7 @@ impl RepositoryExt for Repository {
             Err(e) => return Err(e),
         };
         match object.short_id() {
-            Ok(id) => Ok(id.as_str().and_then(|i| Some(i.to_string()))),
+            Ok(id) => Ok(id.as_str().map(|i| i.to_string())),
             Err(e) => Err(e),
         }
     }
