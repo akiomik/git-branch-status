@@ -38,7 +38,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config build-essential qemu gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y libssl-dev libssl-dev:aarch64 pkg-config build-essential qemu gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           ls -lah /usr/lib/aarch64-linux-gnu
       # - run: sudo apt-get install libssl-dev pkg-config
       # - run: sudo apt-get install g++-arm-linux-gnueabihf
