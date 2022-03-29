@@ -35,6 +35,7 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: |
+          sudo apt-get install libssl-dev pkg-config
           export OPENSSL_LIB_DIR='/usr/lib/x86_64-linux-gnu/'
           export OPENSSL_INCLUDE_DIR='/usr/include/openssl'
       # - run: sudo apt-get install g++-arm-linux-gnueabihf
