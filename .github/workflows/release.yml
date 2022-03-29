@@ -49,10 +49,10 @@ jobs:
       #     args: --release --target ${{ matrix.target }} --all-features
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }}
-      - uses: softprops/action-gh-release@v1
         env:
           OPENSSL_LIB_DIR: /usr/lib/x86_64-linux-gnu
           OPENSSL_INCLUDE_DIR: /usr/include/openssl
+      - uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
           files: |
