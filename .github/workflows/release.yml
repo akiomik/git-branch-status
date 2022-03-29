@@ -34,10 +34,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: |
-          sudo apt-get install libssl-dev pkg-config
-          export OPENSSL_LIB_DIR='/usr/lib/x86_64-linux-gnu/'
-          export OPENSSL_INCLUDE_DIR='/usr/include/openssl'
+      - run: sudo apt-get install libssl-dev pkg-config
       # - run: sudo apt-get install g++-arm-linux-gnueabihf
       #   if: matrix.os == 'ubuntu-latest'
       # - uses: actions-rs/toolchain@v1
@@ -53,6 +50,9 @@ jobs:
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }}
       - uses: softprops/action-gh-release@v1
+        env:
+          OPENSSL_LIB_DIR: /usr/lib/x86_64-linux-gnu
+          OPENSSL_INCLUDE_DIR: /usr/include/openssl
         with:
           generate_release_notes: true
           files: |
