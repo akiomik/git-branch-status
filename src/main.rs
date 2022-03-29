@@ -15,20 +15,20 @@
 extern crate clap;
 
 use ansi_term::Colour::{Green, Red, Yellow};
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use git2::Repository;
 
 use git_branch_status::branch_status::BranchStatus;
 use git_branch_status::repository_ext::RepositoryExt;
 
 fn main() {
-    let matches = App::new("git-branch-status")
+    let matches = Command::new("git-branch-status")
         .version("0.1.0")
         .author("Akiomi Kamakura <akiomik@gmail.com>")
         .about("Show git branch name colored by status")
         .arg(
-            Arg::with_name("mode")
-                .short("m")
+            Arg::new("mode")
+                .short('m')
                 .long("mode")
                 .value_name("MODE")
                 .help("Sets a mode. Currently, `stdout` and `zsh` are supported")
