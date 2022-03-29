@@ -34,7 +34,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: sudo apt-get install libssl-dev pkg-config
+      - run: sudo apt-get install libssl-dev pkg-config g++-aarch64-linux-gnu
       # - run: sudo apt-get install g++-arm-linux-gnueabihf
       #   if: matrix.os == 'ubuntu-latest'
       # - uses: actions-rs/toolchain@v1
