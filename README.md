@@ -37,7 +37,7 @@ $character"""
 
 [custom.branchstatus]
 command = "git branch-status --mode zsh"
-when = "[[ -d .git ]] || [[ `git rev-parse --git-dir > /dev/null 2&>1; echo $?` -eq 0 ]]"
+when = "[[ -d .git ]] || [[ `git rev-parse --git-dir > /dev/null 2>&1; echo $?` -eq 0 ]]"
 format = " on $output"
 ```
 
