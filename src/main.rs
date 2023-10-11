@@ -30,9 +30,9 @@ fn main() {
             Arg::new("mode")
                 .short('m')
                 .long("mode")
-                .value_name("MODE")
-                .help("Sets a mode. Currently, `stdout` and `zsh` are supported")
-                .takes_value(true),
+                .default_value("stdout")
+                .value_parser(["zsh", "stdout"])
+                .help("Sets a mode"),
         )
         .get_matches();
 
@@ -51,7 +51,7 @@ fn main() {
         Err(e) => panic!("failed to get branch status: {}", e),
     };
 
-    let mode = matches.value_of("mode").unwrap_or("stdout");
+    let mode = matches.get_one::<String>("mode").unwrap().as_str();
     match mode {
         "zsh" => {
             match status {
