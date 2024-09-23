@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 git2 = "0.19"
 ansi_term = "0.12"
-clap = "4.5.17"
+clap = "4.5.18"
