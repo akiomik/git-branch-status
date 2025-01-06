@@ -7,6 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-git2 = "0.19"
+git2 = "0.20"
 ansi_term = "0.12"
 clap = "4.5.23"
