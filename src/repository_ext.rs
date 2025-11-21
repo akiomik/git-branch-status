@@ -56,16 +56,10 @@ impl RepositoryExt for Repository {
             Err(e) => return Err(e),
         };
 
-        let detached = match self.head_detached() {
-            Ok(detached) => detached,
-            Err(e) => return Err(e),
-        };
+        let detached = self.head_detached()?;
 
         let branch = if self.state() == RepositoryState::RebaseInteractive {
-            match self.rebase_i_head_name() {
-                Ok(name) => name,
-                Err(e) => return Err(e),
-            }
+            self.rebase_i_head_name()?
         } else if detached {
             let oid = head.as_ref().and_then(|h| h.target());
             let short = match oid.map(|oid| self.to_short_oid(oid)) {
@@ -95,10 +89,7 @@ impl RepositoryExt for Repository {
             .include_unmodified(false)
             .exclude_submodules(true);
 
-        let stats = match self.statuses(Some(&mut opts)) {
-            Ok(stats) => stats,
-            Err(e) => return Err(e),
-        };
+        let stats = self.statuses(Some(&mut opts))?;
 
         let status = stats.iter().fold(BranchStatus::NotChanged, |acc, s| {
             if acc < BranchStatus::Conflicted && s.is_conflicted() {
@@ -130,10 +121,7 @@ impl RepositoryExt for Repository {
     }
 
     fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error> {
-        let object = match self.find_object(oid, None) {
-            Ok(object) => object,
-            Err(e) => return Err(e),
-        };
+        let object = self.find_object(oid, None)?;
         match object.short_id() {
             Ok(id) => Ok(id.as_str().map(|i| i.to_string())),
             Err(e) => Err(e),
