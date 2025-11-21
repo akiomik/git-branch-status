@@ -13,8 +13,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v2
+    - uses: actions/checkout@v4
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.81.0
+        components: rustfmt, clippy
+    - uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/bin/
@@ -28,10 +33,6 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
     - name: Run rustfmt
-      run: |
-        rustup component add rustfmt
-        cargo fmt -- --check
+      run: cargo fmt -- --check
     - name: Run clippy
-      run: |
-        rustup component add clippy
-        cargo clippy
+      run: cargo clippy -- -D warnings
