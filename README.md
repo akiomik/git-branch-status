@@ -43,10 +43,12 @@ format = " on $output"
 
 ## Benchmark
 
-Run `./scripts/bench.sh`. `git-branch-status` is about 5x faster than `vcs_info` on M1 MacBook Pro (2021).
+### Against vcs_info
+
+Run `./scripts/bench-vcs-info.sh`. `git-branch-status` is about 5x faster than `vcs_info` on M1 MacBook Pro (2021).
 
 ```sh
-❯ ./scripts/bench.sh
+❯ ./scripts/bench-vcs-info.sh
 Setup vcs_info...done!
 Setup git-branch-status...done!
 
@@ -57,4 +59,19 @@ Elapsed time: 2029ms
 Run './target/release/git-branch-status --mode zsh' 100 times
 ....................................................................................................done!
 Elapsed time: 404ms
+```
+
+### git-branch-status on its own
+
+Run `./scripts/bench.sh` to benchmark `git-branch-status` alone with
+[hyperfine](https://github.com/sharkdp/hyperfine). This is handy when working on
+performance, since it reports the mean, standard deviation, and min/max across
+many runs.
+
+```sh
+❯ ./scripts/bench.sh
+Building git-branch-status...
+Benchmark 1: ./target/release/git-branch-status --mode zsh
+  Time (mean ± σ):       8.2 ms ±   0.4 ms    [User: 2.8 ms, System: 2.9 ms]
+  Range (min … max):     7.7 ms …  10.7 ms    327 runs
 ```
