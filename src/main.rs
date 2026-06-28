@@ -61,7 +61,7 @@ fn main() {
                 BranchStatus::Conflicted => print!("%F{{red}}{}%f", branch),
             };
         }
-        "stdout" => {
+        _ => {
             match status {
                 BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
                 BranchStatus::Staged => print!("{}", Yellow.paint(branch)),
@@ -69,6 +69,5 @@ fn main() {
                 BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
             };
         }
-        _ => panic!("unsupported mode is specified: {}", mode),
     };
 }
