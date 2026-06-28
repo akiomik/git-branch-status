@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Exit quietly instead of panicking when the branch name or status cannot be
   retrieved, so the prompt is not polluted with a panic message
+- Show the branch name instead of `HEAD (no branch)` on an unborn branch (a
+  repository without any commits yet)
+- Show the original branch name during an apply-backend rebase, instead of the
+  detached commit hash
 
 ## [0.1.0] - 2026-06-29
 
