@@ -71,7 +71,7 @@ impl RepositoryExt for Repository {
             short.unwrap_or_else(|| "HEAD (detached)".to_string())
         } else {
             head.as_ref()
-                .and_then(|h| h.shorthand())
+                .and_then(|h| h.shorthand().ok())
                 .unwrap_or("HEAD (no branch)")
                 .to_string()
         };
@@ -123,7 +123,7 @@ impl RepositoryExt for Repository {
     fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error> {
         let object = self.find_object(oid, None)?;
         match object.short_id() {
-            Ok(id) => Ok(id.as_str().map(|i| i.to_string())),
+            Ok(id) => Ok(id.as_str().map(|i| i.to_string()).ok()),
             Err(e) => Err(e),
         }
     }
