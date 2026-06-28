@@ -39,6 +39,7 @@ not available.
 | `StatusOptions::no_refresh(true)` | ~2.0 s | 1.01× — within noise |
 | Diff API directly (conflicts via index, unstaged via index↔workdir, staged via HEAD↔index) | ~2.1 s | no improvement |
 | Branch name only (status skipped) | **~6 ms** | isolates the cost to `branch_status()` |
+| `gix` status, untracked disabled (pure-Rust prototype) | **~91 ms** | ~22.6× faster than the baseline |
 | `git status -uno --porcelain` (git binary) | **~64 ms** | for reference |
 | `git diff --quiet` (git binary) | **~61 ms** | for reference |
 | `git status --porcelain` (git binary, with untracked) | ~1.66 s | for reference |
@@ -109,11 +110,39 @@ Keep libgit2 but add an escape hatch: a `--no-status` mode (branch name only,
 - Cons: does not actually make status fast — it trades the feature away in the
   cases where it is slow.
 
+### D. Migrate from `git2` to `gix` (gitoxide)
+
+Replace the libgit2 bindings with [`gix`](https://github.com/GitoxideLabs/gitoxide),
+a pure-Rust git implementation whose status is multi-threaded and avoids libgit2's
+per-file attribute/ignore overhead. Configure it to skip the untracked dirwalk
+(`untracked_files(UntrackedFiles::None)`, the `-uno` equivalent) and classify the
+items: `TreeIndex` ⇒ staged, `IndexWorktree::Modification` ⇒ unstaged, and
+`EntryStatus::Conflict` ⇒ conflicted.
+
+A throwaway prototype (`gix` 0.85, status only) was measured on the same
+repository:
+
+- **~91 ms vs ~2.0 s — about 22.6× faster**, close to `git status -uno` (~64 ms),
+  and with no process spawn.
+- Clean / modified / staged / conflicted were all classified correctly.
+
+- Pros: ~22× faster without shelling out; drops the libgit2/OpenSSL C dependency
+  (pure Rust). This is essentially option B, but using a maintained, correct
+  implementation instead of a hand-rolled one.
+- Cons: `gix` is pre-1.0, so expect ongoing API churn. The migration is not just
+  the status — the branch name (HEAD / detached / unborn), tag `describe`, and
+  rebase-state detection must all be reimplemented on `gix`, and the existing
+  behavior (including the bug fixes for unborn branches, rebases, and tags) must
+  be re-verified. The dependency tree is larger.
+
 ## Recommendation
 
-Option **A** offers the largest, lowest-risk win and is consistent with the tool
-being a git subcommand. Option **C** can complement any choice as a user-facing
-escape hatch. Option **B** is fast but carries the most correctness risk.
+Option **D** (migrate to `gix`) is the strongest: it matches the speed of
+shelling out (~22×) while staying a single pure-Rust binary with no process
+spawn, at the cost of a larger migration and tracking a pre-1.0 dependency.
+Option **A** is the pragmatic fallback if taking on `gix` is undesirable. Option
+**C** can complement either as a user-facing escape hatch. Option **B** is fast
+but carries the most correctness risk and is largely superseded by **D**.
 
 ## Upstream and prior art
 
