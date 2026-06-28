@@ -114,3 +114,36 @@ Keep libgit2 but add an escape hatch: a `--no-status` mode (branch name only,
 Option **A** offers the largest, lowest-risk win and is consistent with the tool
 being a git subcommand. Option **C** can complement any choice as a user-facing
 escape hatch. Option **B** is fast but carries the most correctness risk.
+
+## Upstream and prior art
+
+This is a long-standing, known limitation in libgit2 rather than something
+fixable through `StatusOptions` — and it is treated upstream as a performance
+enhancement, not a correctness bug.
+
+- [libgit2#4230 — "git_status_list is slower than `git status`"](https://github.com/libgit2/libgit2/issues/4230):
+  open since 2017 and still open (last bumped in 2025). A maintainer confirmed it
+  is something they care about, while framing it as a mix of "easy wins" and
+  hard, structural work (e.g. threading). The thread pins down extra root causes
+  beyond the working-tree walk noted above:
+  - libgit2 status is single-threaded, whereas `git` parallelizes its `lstat`s.
+  - For every file it searches for `.gitattributes` / `.gitignore` in each parent
+    directory up to the repository root, with weak caching of negative lookups.
+    Computing the OID for an entry pulls in the filter/attribute machinery
+    (visible in the reported call stacks: `git_diff_index_to_workdir` →
+    `maybe_modified` → `git_diff__oid_for_entry` → attribute lookups → `lstat`).
+  - Even when only unstaged changes are wanted, working-tree files are still
+    checked against ignore rules.
+- Comments in that thread independently corroborate this investigation:
+  - `git_diff_index_to_workdir` is as slow as `git_status_list`, while
+    `git_diff_tree_to_index` is fast — matching the "diff API directly" result
+    above.
+  - A `git2-rs` user reported the same and resorted to shelling out to
+    `git status`, citing a ~20× difference (in line with Option A here).
+- Related upstream PRs (e.g. libgit2#5018 and follow-ups) have stalled in review,
+  so an upstream fix should not be assumed to be coming soon.
+- [gitstatusd](https://github.com/romkatv/gitstatus) is prior art for a dedicated
+  fast implementation: a patched/forked libgit2 (skip parsing `.gitignore` on a
+  clean tree, parallelize the index-to-workdir scan, disable index validation)
+  reported as ~10× faster than `lg2 status` and ~2.5× faster than `git status`.
+  It powers Powerlevel10k's prompt.
