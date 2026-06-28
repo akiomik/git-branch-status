@@ -6,6 +6,26 @@ A command line tool for displaying git branch colored by status, like zsh's [vcs
 
 ## Installation
 
+### From crates.io
+
+```sh
+cargo install git-branch-status
+```
+
+### Prebuilt binaries
+
+Download the archive for your platform from the
+[releases page](https://github.com/akiomik/git-branch-status/releases), extract
+it, and place the `git-branch-status` binary somewhere on your `PATH` (Windows
+builds are distributed as a `.zip`):
+
+```sh
+tar xzf git-branch-status-<version>-<target>.tar.gz
+cp git-branch-status ~/bin
+```
+
+### From source
+
 ```sh
 git clone https://github.com/akiomik/git-branch-status.git && cd git-branch-status
 cargo build --release
