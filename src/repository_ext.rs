@@ -155,3 +155,97 @@ impl RepositoryExt for Repository {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RepositoryExt;
+    use git2::{Oid, Repository, RepositoryInitOptions, RepositoryState, Signature};
+    use std::fs;
+    use tempfile::TempDir;
+
+    fn init_repo() -> (TempDir, Repository) {
+        let dir = TempDir::new().unwrap();
+        let mut opts = RepositoryInitOptions::new();
+        opts.initial_head("main");
+        let repo = Repository::init_opts(dir.path(), &opts).unwrap();
+        (dir, repo)
+    }
+
+    fn commit(repo: &Repository, message: &str) -> Oid {
+        let sig = Signature::now("tester", "tester@example.com").unwrap();
+        let tree_id = repo.index().unwrap().write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let parents = match repo.head() {
+            Ok(head) => vec![head.peel_to_commit().unwrap()],
+            Err(_) => vec![],
+        };
+        let parent_refs: Vec<&_> = parents.iter().collect();
+        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parent_refs)
+            .unwrap()
+    }
+
+    #[test]
+    fn branch_name_returns_branch_on_unborn_branch() {
+        let (_dir, repo) = init_repo();
+        assert_eq!(repo.branch_name().unwrap(), "main");
+    }
+
+    #[test]
+    fn branch_name_returns_branch_on_normal_branch() {
+        let (_dir, repo) = init_repo();
+        commit(&repo, "initial");
+        assert_eq!(repo.branch_name().unwrap(), "main");
+    }
+
+    #[test]
+    fn branch_name_returns_short_hash_on_detached_head() {
+        let (_dir, repo) = init_repo();
+        let oid = commit(&repo, "initial");
+        repo.set_head_detached(oid).unwrap();
+        let short = repo.to_short_oid(oid).unwrap().unwrap();
+        assert_eq!(repo.branch_name().unwrap(), short);
+    }
+
+    #[test]
+    fn unborn_branch_name_returns_symbolic_target() {
+        let (_dir, repo) = init_repo();
+        assert_eq!(repo.unborn_branch_name().unwrap(), Some("main".to_string()));
+    }
+
+    #[test]
+    fn rebase_head_name_returns_none_when_not_rebasing() {
+        let (_dir, repo) = init_repo();
+        assert_eq!(repo.rebase_head_name(RepositoryState::Clean).unwrap(), None);
+    }
+
+    #[test]
+    fn rebase_head_name_reads_apply_backend_head_name() {
+        let (_dir, repo) = init_repo();
+        let rebase_dir = repo.path().join("rebase-apply");
+        fs::create_dir_all(&rebase_dir).unwrap();
+        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n").unwrap();
+
+        assert_eq!(
+            repo.rebase_head_name(RepositoryState::Rebase).unwrap(),
+            Some("feature".to_string())
+        );
+    }
+
+    #[test]
+    fn rebase_head_name_reads_merge_backend_head_name() {
+        let (_dir, repo) = init_repo();
+        let rebase_dir = repo.path().join("rebase-merge");
+        fs::create_dir_all(&rebase_dir).unwrap();
+        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n").unwrap();
+
+        assert_eq!(
+            repo.rebase_head_name(RepositoryState::RebaseInteractive)
+                .unwrap(),
+            Some("feature".to_string())
+        );
+        assert_eq!(
+            repo.rebase_head_name(RepositoryState::RebaseMerge).unwrap(),
+            Some("feature".to_string())
+        );
+    }
+}

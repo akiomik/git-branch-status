@@ -10,3 +10,6 @@ license = "Apache-2.0"
 git2 = "0.21"
 ansi_term = "0.12"
 clap = "4.6.1"
+
+[dev-dependencies]
+tempfile = "3"
