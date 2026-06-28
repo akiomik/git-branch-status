@@ -20,7 +20,7 @@ use crate::branch_status::BranchStatus;
 use crate::status_entry_ext::StatusEntryExt;
 
 pub trait RepositoryExt {
-    fn action(&self) -> Option<&str>;
+    fn action(&self, state: RepositoryState) -> Option<&'static str>;
     fn branch_name(&self) -> Result<String, Error>;
     fn branch_status(&self) -> Result<BranchStatus, Error>;
     fn rebase_i_head_name(&self) -> Result<String, Error>;
@@ -28,8 +28,8 @@ pub trait RepositoryExt {
 }
 
 impl RepositoryExt for Repository {
-    fn action(&self) -> Option<&str> {
-        match self.state() {
+    fn action(&self, state: RepositoryState) -> Option<&'static str> {
+        match state {
             RepositoryState::ApplyMailbox => Some("am"),
             RepositoryState::ApplyMailboxOrRebase => Some("am/rebase"),
             RepositoryState::Bisect => Some("bisect"),
@@ -57,8 +57,9 @@ impl RepositoryExt for Repository {
         };
 
         let detached = self.head_detached()?;
+        let state = self.state();
 
-        let branch = if self.state() == RepositoryState::RebaseInteractive {
+        let branch = if state == RepositoryState::RebaseInteractive {
             self.rebase_i_head_name()?
         } else if detached {
             let oid = head.as_ref().and_then(|h| h.target());
@@ -76,7 +77,7 @@ impl RepositoryExt for Repository {
                 .to_string()
         };
 
-        match self.action() {
+        match self.action(state) {
             Some(action) => Ok(branch + ":" + action),
             None => Ok(branch),
         }
