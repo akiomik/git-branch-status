@@ -40,12 +40,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+
+      # Install the target explicitly instead of relying on dtolnay/rust-toolchain's `targets`
+      # parameter, which does not reliably install cross-compilation targets on macOS ARM64
+      # runners (e.g. x86_64-apple-darwin on macos-latest). Not needed for cross builds since
+      # cross compiles inside a Docker container that manages its own toolchain.
+      - name: Add Rust target
+        if: "!matrix.use-cross"
+        run: rustup target add ${{ matrix.target }}
 
       # git2 depends on OpenSSL. For native Linux builds we install it explicitly; cross builds
       # resolve it inside the container; macOS and Windows toolchains handle it automatically.
