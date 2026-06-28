@@ -43,12 +43,12 @@ fn main() {
 
     let branch = match repo.branch_name() {
         Ok(branch) => branch,
-        Err(e) => panic!("failed to get branch: {}", e),
+        Err(_) => std::process::exit(1),
     };
 
     let status = match repo.branch_status() {
         Ok(status) => status,
-        Err(e) => panic!("failed to get branch status: {}", e),
+        Err(_) => std::process::exit(1),
     };
 
     let mode = matches.get_one::<String>("mode").unwrap().as_str();
