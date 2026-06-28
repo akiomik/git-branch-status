@@ -23,7 +23,8 @@ pub trait RepositoryExt {
     fn action(&self, state: RepositoryState) -> Option<&'static str>;
     fn branch_name(&self) -> Result<String, Error>;
     fn branch_status(&self) -> Result<BranchStatus, Error>;
-    fn rebase_i_head_name(&self) -> Result<String, Error>;
+    fn rebase_head_name(&self, state: RepositoryState) -> Result<Option<String>, Error>;
+    fn unborn_branch_name(&self) -> Result<Option<String>, Error>;
     fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error>;
 }
 
@@ -59,8 +60,8 @@ impl RepositoryExt for Repository {
         let detached = self.head_detached()?;
         let state = self.state();
 
-        let branch = if state == RepositoryState::RebaseInteractive {
-            self.rebase_i_head_name()?
+        let branch = if let Some(name) = self.rebase_head_name(state)? {
+            name
         } else if detached {
             let oid = head.as_ref().and_then(|h| h.target());
             let short = match oid.map(|oid| self.to_short_oid(oid)) {
@@ -70,11 +71,13 @@ impl RepositoryExt for Repository {
             };
 
             short.unwrap_or_else(|| "HEAD (detached)".to_string())
+        } else if let Some(name) = head.as_ref().and_then(|h| h.shorthand().ok()) {
+            name.to_string()
         } else {
-            head.as_ref()
-                .and_then(|h| h.shorthand().ok())
-                .unwrap_or("HEAD (no branch)")
-                .to_string()
+            // An unborn branch (e.g. a freshly initialized repository) has no
+            // HEAD commit, so resolve the branch name from the symbolic HEAD.
+            self.unborn_branch_name()?
+                .unwrap_or_else(|| "HEAD (no branch)".to_string())
         };
 
         match self.action(state) {
@@ -107,18 +110,41 @@ impl RepositoryExt for Repository {
         Ok(status)
     }
 
-    fn rebase_i_head_name(&self) -> Result<String, Error> {
-        let path = self.path().join("rebase-merge").join("head-name");
-
-        let refname = match fs::read_to_string(path) {
-            Ok(content) => content,
-            Err(e) => return Err(Error::from_str(&e.to_string())),
+    fn rebase_head_name(&self, state: RepositoryState) -> Result<Option<String>, Error> {
+        // The original branch name is recorded in a `head-name` file while a
+        // rebase is in progress. The merge backend (and interactive rebases)
+        // use `rebase-merge/`, while the apply backend uses `rebase-apply/`.
+        let dir = match state {
+            RepositoryState::RebaseInteractive | RepositoryState::RebaseMerge => "rebase-merge",
+            RepositoryState::Rebase => "rebase-apply",
+            _ => return Ok(None),
         };
 
-        match self.find_reference(refname.trim()) {
-            Ok(ref reference) => Ok(reference.shorthand().unwrap_or(&refname).to_string()),
-            Err(e) => Err(e),
-        }
+        let path = self.path().join(dir).join("head-name");
+        let refname = match fs::read_to_string(&path) {
+            Ok(content) => content.trim().to_string(),
+            Err(_) => return Ok(None),
+        };
+
+        let name = match self.find_reference(&refname) {
+            Ok(reference) => reference.shorthand().unwrap_or(&refname).to_string(),
+            Err(_) => refname
+                .strip_prefix("refs/heads/")
+                .unwrap_or(&refname)
+                .to_string(),
+        };
+
+        Ok(Some(name))
+    }
+
+    fn unborn_branch_name(&self) -> Result<Option<String>, Error> {
+        let reference = self.find_reference("HEAD")?;
+        Ok(reference.symbolic_target()?.map(|target| {
+            target
+                .strip_prefix("refs/heads/")
+                .unwrap_or(target)
+                .to_string()
+        }))
     }
 
     fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error> {
