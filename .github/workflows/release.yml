@@ -10,19 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    steps:
-      # Create the release once here so that generate_release_notes runs exactly once.
-      # Each build job then uploads its artifact to the already-created release without
-      # regenerating the notes, which would cause them to be overwritten on every upload.
-      - uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-
   build:
     name: Build ${{ matrix.target }}
-    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
