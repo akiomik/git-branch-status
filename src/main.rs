@@ -23,8 +23,8 @@ use git_branch_status::repository_ext::RepositoryExt;
 
 fn main() {
     let matches = Command::new("git-branch-status")
-        .version("0.1.0")
-        .author("Akiomi Kamakura <akiomik@gmail.com>")
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
         .about("Show git branch name colored by status")
         .arg(
             Arg::new("mode")
