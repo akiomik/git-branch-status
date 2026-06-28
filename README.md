@@ -28,7 +28,9 @@ RPROMPT='$(git branch-status --mode zsh)'
 
 Add the following to `~/.config/starship.toml`:
 
-```sh
+```toml
+command_timeout = 1000
+
 format = """
 $directory\
 $custom\
@@ -37,9 +39,15 @@ $character"""
 
 [custom.branchstatus]
 command = "git branch-status --mode zsh"
-when = "[[ -d .git ]] || [[ `git rev-parse --git-dir > /dev/null 2>&1; echo $?` -eq 0 ]]"
+when = "git rev-parse --is-inside-work-tree 2>/dev/null"
 format = " on $output"
 ```
+
+Starship aborts any custom command that runs longer than
+[`command_timeout`](https://starship.rs/config/#prompt) (500ms by default) and
+shows a warning instead of its output. In large repositories `git-branch-status`
+can take longer than that, so raise `command_timeout` (e.g. to 1000ms) if the
+module disappears or you see a timeout warning.
 
 ## Benchmark
 
