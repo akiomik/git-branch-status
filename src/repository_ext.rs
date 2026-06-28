@@ -14,7 +14,10 @@
 
 use std::fs;
 
-use git2::{Error, ErrorCode, Oid, Repository, RepositoryState, StatusOptions};
+use git2::{
+    DescribeFormatOptions, DescribeOptions, Error, ErrorCode, Oid, Repository, RepositoryState,
+    StatusOptions,
+};
 
 use crate::branch_status::BranchStatus;
 use crate::status_entry_ext::StatusEntryExt;
@@ -25,6 +28,7 @@ pub trait RepositoryExt {
     fn branch_status(&self) -> Result<BranchStatus, Error>;
     fn rebase_head_name(&self, state: RepositoryState) -> Result<Option<String>, Error>;
     fn unborn_branch_name(&self) -> Result<Option<String>, Error>;
+    fn tag_name(&self) -> Result<Option<String>, Error>;
     fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error>;
 }
 
@@ -63,14 +67,19 @@ impl RepositoryExt for Repository {
         let branch = if let Some(name) = self.rebase_head_name(state)? {
             name
         } else if detached {
-            let oid = head.as_ref().and_then(|h| h.target());
-            let short = match oid.map(|oid| self.to_short_oid(oid)) {
-                Some(Ok(id)) => id,
-                Some(Err(e)) => return Err(e),
-                None => None,
-            };
+            // Prefer a tag pointing at HEAD, falling back to the short hash.
+            if let Some(tag) = self.tag_name()? {
+                tag
+            } else {
+                let oid = head.as_ref().and_then(|h| h.target());
+                let short = match oid.map(|oid| self.to_short_oid(oid)) {
+                    Some(Ok(id)) => id,
+                    Some(Err(e)) => return Err(e),
+                    None => None,
+                };
 
-            short.unwrap_or_else(|| "HEAD (detached)".to_string())
+                short.unwrap_or_else(|| "HEAD (detached)".to_string())
+            }
         } else if let Some(name) = head.as_ref().and_then(|h| h.shorthand().ok()) {
             name.to_string()
         } else {
@@ -147,6 +156,24 @@ impl RepositoryExt for Repository {
         }))
     }
 
+    fn tag_name(&self) -> Result<Option<String>, Error> {
+        // `max_candidates_tags(0)` makes this behave like `git describe
+        // --exact-match`: it resolves only a tag that points at HEAD and
+        // errors otherwise, which we treat as "no tag".
+        let mut opts = DescribeOptions::new();
+        opts.describe_tags().max_candidates_tags(0);
+
+        let describe = match self.describe(&opts) {
+            Ok(describe) => describe,
+            Err(_) => return Ok(None),
+        };
+
+        let mut format = DescribeFormatOptions::new();
+        format.abbreviated_size(0);
+
+        Ok(describe.format(Some(&format)).ok())
+    }
+
     fn to_short_oid(&self, oid: Oid) -> Result<Option<String>, Error> {
         let object = self.find_object(oid, None)?;
         match object.short_id() {
@@ -204,6 +231,34 @@ mod tests {
         repo.set_head_detached(oid).unwrap();
         let short = repo.to_short_oid(oid).unwrap().unwrap();
         assert_eq!(repo.branch_name().unwrap(), short);
+    }
+
+    #[test]
+    fn branch_name_returns_tag_on_detached_head_at_tag() {
+        let (_dir, repo) = init_repo();
+        let oid = commit(&repo, "initial");
+        let object = repo.find_object(oid, None).unwrap();
+        repo.tag_lightweight("v1.0.0", &object, false).unwrap();
+        repo.set_head_detached(oid).unwrap();
+        assert_eq!(repo.branch_name().unwrap(), "v1.0.0");
+    }
+
+    #[test]
+    fn tag_name_returns_none_without_tag() {
+        let (_dir, repo) = init_repo();
+        let oid = commit(&repo, "initial");
+        repo.set_head_detached(oid).unwrap();
+        assert_eq!(repo.tag_name().unwrap(), None);
+    }
+
+    #[test]
+    fn tag_name_returns_tag_at_head() {
+        let (_dir, repo) = init_repo();
+        let oid = commit(&repo, "initial");
+        let object = repo.find_object(oid, None).unwrap();
+        repo.tag_lightweight("v1.0.0", &object, false).unwrap();
+        repo.set_head_detached(oid).unwrap();
+        assert_eq!(repo.tag_name().unwrap(), Some("v1.0.0".to_string()));
     }
 
     #[test]

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository without any commits yet)
 - Show the original branch name during an apply-backend rebase, instead of the
   detached commit hash
+- Show the tag name when HEAD is detached at a tag, instead of the commit hash
 
 ## [0.1.0] - 2026-06-29
 
