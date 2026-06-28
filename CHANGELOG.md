@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Exit quietly instead of panicking when the branch name or status cannot be
+  retrieved, so the prompt is not polluted with a panic message
+
 ## [0.1.0] - 2026-06-29
 
 ### Changed
