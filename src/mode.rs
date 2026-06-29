@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod branch_status;
-pub mod cli;
-pub mod error;
-pub mod mode;
-pub mod repository;
+use clap::ValueEnum;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, ValueEnum)]
+pub enum Mode {
+    Stdout,
+    Zsh,
+}

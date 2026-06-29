@@ -16,6 +16,8 @@ use std::path::PathBuf;
 
 use clap::{Parser, ValueHint};
 
+use crate::mode::Mode;
+
 #[derive(Parser)]
 #[command(
     name = "git-branch-status",
@@ -28,8 +30,8 @@ use clap::{Parser, ValueHint};
 #[non_exhaustive]
 pub struct Cli {
     /// Sets a mode
-    #[arg(short, long, value_parser = ["zsh", "stdout"], default_value = "stdout")]
-    pub mode: String,
+    #[arg(short, long, value_enum, default_value_t = Mode::Stdout)]
+    pub mode: Mode,
 
     /// Path to the git repository (default: current directory)
     #[arg(value_name = "DIR", value_hint = ValueHint::DirPath, default_value = ".")]
