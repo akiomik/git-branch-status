@@ -16,10 +16,9 @@ extern crate clap;
 
 use ansi_term::Colour::{Green, Red, Yellow};
 use clap::{Arg, Command};
-use git2::Repository;
 
 use git_branch_status::branch_status::BranchStatus;
-use git_branch_status::repository_ext::RepositoryExt;
+use git_branch_status::repository::Repository;
 
 fn main() {
     let matches = Command::new("git-branch-status")
