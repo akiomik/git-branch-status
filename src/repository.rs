@@ -192,16 +192,16 @@ impl Repository {
 
 #[cfg(test)]
 mod tests {
-    use super::Repository;
-    use crate::branch::Status;
+    use super::*;
+
+    use anyhow::Result;
     use std::fs;
-    use std::path::Path;
     use std::process::Command;
     use tempfile::TempDir;
 
     /// Run `git` in `dir`, neutralizing the user's global signing config and
     /// pinning identity so fixtures are hermetic.
-    fn git(dir: &Path, args: &[&str]) {
+    fn git(dir: &Path, args: &[&str]) -> Result<()> {
         let mut full = vec!["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"];
         full.extend_from_slice(args);
         let out = Command::new("git")
@@ -211,157 +211,165 @@ mod tests {
             .env("GIT_AUTHOR_EMAIL", "tester@example.com")
             .env("GIT_COMMITTER_NAME", "tester")
             .env("GIT_COMMITTER_EMAIL", "tester@example.com")
-            .output()
-            .unwrap();
+            .output()?;
         assert!(
             out.status.success(),
             "git {args:?} failed: {}",
             String::from_utf8_lossy(&out.stderr)
         );
+        Ok(())
     }
 
-    fn git_stdout(dir: &Path, args: &[&str]) -> String {
-        let out = Command::new("git")
-            .current_dir(dir)
-            .args(args)
-            .output()
-            .unwrap();
+    fn git_stdout(dir: &Path, args: &[&str]) -> Result<String> {
+        let out = Command::new("git").current_dir(dir).args(args).output()?;
         assert!(out.status.success());
-        String::from_utf8(out.stdout).unwrap().trim().to_string()
+        Ok(String::from_utf8(out.stdout)?.trim().to_string())
     }
 
     /// A repository with a single committed file on `main`.
-    fn init_repo() -> TempDir {
-        let dir = TempDir::new().unwrap();
-        git(dir.path(), &["init", "-q", "-b", "main"]);
-        fs::write(dir.path().join("f"), "a\n").unwrap();
-        git(dir.path(), &["add", "f"]);
-        git(dir.path(), &["commit", "-qm", "init"]);
-        dir
+    fn init_repo() -> Result<TempDir> {
+        let dir = TempDir::new()?;
+        git(dir.path(), &["init", "-q", "-b", "main"])?;
+        fs::write(dir.path().join("f"), "a\n")?;
+        git(dir.path(), &["add", "f"])?;
+        git(dir.path(), &["commit", "-qm", "init"])?;
+        Ok(dir)
     }
 
-    fn open(dir: &TempDir) -> Repository {
-        Repository::discover(dir.path()).unwrap()
-    }
-
-    #[test]
-    fn branch_name_returns_branch_on_unborn_branch() {
-        let dir = TempDir::new().unwrap();
-        git(dir.path(), &["init", "-q", "-b", "main"]);
-        assert_eq!(open(&dir).branch_name().unwrap(), "main");
+    fn open(dir: &TempDir) -> Result<Repository> {
+        Repository::discover(dir.path()).map_err(Into::into)
     }
 
     #[test]
-    fn branch_name_returns_branch_on_normal_branch() {
-        let dir = init_repo();
-        assert_eq!(open(&dir).branch_name().unwrap(), "main");
+    fn branch_name_returns_branch_on_unborn_branch() -> Result<()> {
+        let dir = TempDir::new()?;
+        git(dir.path(), &["init", "-q", "-b", "main"])?;
+        assert_eq!(open(&dir)?.branch_name()?, "main");
+        Ok(())
     }
 
     #[test]
-    fn branch_name_returns_short_hash_on_detached_head() {
-        let dir = init_repo();
-        git(dir.path(), &["checkout", "-q", "--detach", "HEAD"]);
-        let short = git_stdout(dir.path(), &["rev-parse", "--short", "HEAD"]);
-        assert_eq!(open(&dir).branch_name().unwrap(), short);
+    fn branch_name_returns_branch_on_normal_branch() -> Result<()> {
+        let dir = init_repo()?;
+        assert_eq!(open(&dir)?.branch_name()?, "main");
+        Ok(())
     }
 
     #[test]
-    fn branch_name_returns_lightweight_tag_on_detached_head_at_tag() {
-        let dir = init_repo();
-        git(dir.path(), &["tag", "v1.0.0"]);
-        git(dir.path(), &["checkout", "-q", "--detach", "v1.0.0"]);
-        assert_eq!(open(&dir).branch_name().unwrap(), "v1.0.0");
+    fn branch_name_returns_short_hash_on_detached_head() -> Result<()> {
+        let dir = init_repo()?;
+        git(dir.path(), &["checkout", "-q", "--detach", "HEAD"])?;
+        let short = git_stdout(dir.path(), &["rev-parse", "--short", "HEAD"])?;
+        assert_eq!(open(&dir)?.branch_name()?, short);
+        Ok(())
     }
 
     #[test]
-    fn branch_name_returns_annotated_tag_on_detached_head_at_tag() {
-        let dir = init_repo();
-        git(dir.path(), &["tag", "-a", "v2.0.0", "-m", "rel"]);
-        git(dir.path(), &["checkout", "-q", "--detach", "v2.0.0"]);
-        assert_eq!(open(&dir).branch_name().unwrap(), "v2.0.0");
+    fn branch_name_returns_lightweight_tag_on_detached_head_at_tag() -> Result<()> {
+        let dir = init_repo()?;
+        git(dir.path(), &["tag", "v1.0.0"])?;
+        git(dir.path(), &["checkout", "-q", "--detach", "v1.0.0"])?;
+        assert_eq!(open(&dir)?.branch_name()?, "v1.0.0");
+        Ok(())
     }
 
     #[test]
-    fn branch_name_appends_merge_action_during_merge() {
-        let dir = init_repo();
+    fn branch_name_returns_annotated_tag_on_detached_head_at_tag() -> Result<()> {
+        let dir = init_repo()?;
+        git(dir.path(), &["tag", "-a", "v2.0.0", "-m", "rel"])?;
+        git(dir.path(), &["checkout", "-q", "--detach", "v2.0.0"])?;
+        assert_eq!(open(&dir)?.branch_name()?, "v2.0.0");
+        Ok(())
+    }
+
+    #[test]
+    fn branch_name_appends_merge_action_during_merge() -> Result<()> {
+        let dir = init_repo()?;
         // gix reports the `Merge` state when MERGE_HEAD exists. Fabricate it
         // directly rather than via `git merge`, whose conflict behavior is
         // environment-sensitive (e.g. it can no-op on some CI runners).
-        let head = git_stdout(dir.path(), &["rev-parse", "HEAD"]);
+        let head = git_stdout(dir.path(), &["rev-parse", "HEAD"])?;
         fs::write(
             dir.path().join(".git").join("MERGE_HEAD"),
             format!("{head}\n"),
-        )
-        .unwrap();
-        assert_eq!(open(&dir).branch_name().unwrap(), "main:merge");
+        )?;
+        assert_eq!(open(&dir)?.branch_name()?, "main:merge");
+        Ok(())
     }
 
     #[test]
-    fn branch_name_uses_rebase_merge_head_name_during_interactive_rebase() {
-        let dir = init_repo();
+    fn branch_name_uses_rebase_merge_head_name_during_interactive_rebase() -> Result<()> {
+        let dir = init_repo()?;
         let rebase_dir = dir.path().join(".git").join("rebase-merge");
-        fs::create_dir_all(&rebase_dir).unwrap();
-        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n").unwrap();
-        fs::write(rebase_dir.join("interactive"), "").unwrap();
-        assert_eq!(open(&dir).branch_name().unwrap(), "feature:rebase-i");
+        fs::create_dir_all(&rebase_dir)?;
+        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n")?;
+        fs::write(rebase_dir.join("interactive"), "")?;
+        assert_eq!(open(&dir)?.branch_name()?, "feature:rebase-i");
+        Ok(())
     }
 
     #[test]
-    fn branch_name_uses_rebase_apply_head_name_during_apply_rebase() {
-        let dir = init_repo();
+    fn branch_name_uses_rebase_apply_head_name_during_apply_rebase() -> Result<()> {
+        let dir = init_repo()?;
         let rebase_dir = dir.path().join(".git").join("rebase-apply");
-        fs::create_dir_all(&rebase_dir).unwrap();
-        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n").unwrap();
-        fs::write(rebase_dir.join("rebasing"), "").unwrap();
-        assert_eq!(open(&dir).branch_name().unwrap(), "feature:rebase");
+        fs::create_dir_all(&rebase_dir)?;
+        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n")?;
+        fs::write(rebase_dir.join("rebasing"), "")?;
+        assert_eq!(open(&dir)?.branch_name()?, "feature:rebase");
+        Ok(())
     }
 
     #[test]
-    fn branch_status_is_not_changed_on_clean_tree() {
-        let dir = init_repo();
-        assert_eq!(open(&dir).branch_status().unwrap(), Status::NotChanged);
+    fn branch_status_is_not_changed_on_clean_tree() -> Result<()> {
+        let dir = init_repo()?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::NotChanged);
+        Ok(())
     }
 
     #[test]
-    fn branch_status_is_staged_on_staged_change() {
-        let dir = init_repo();
-        fs::write(dir.path().join("g"), "b\n").unwrap();
-        git(dir.path(), &["add", "g"]);
-        assert_eq!(open(&dir).branch_status().unwrap(), Status::Staged);
+    fn branch_status_is_staged_on_staged_change() -> Result<()> {
+        let dir = init_repo()?;
+        fs::write(dir.path().join("g"), "b\n")?;
+        git(dir.path(), &["add", "g"])?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::Staged);
+        Ok(())
     }
 
     #[test]
-    fn branch_status_is_unstaged_on_worktree_change() {
-        let dir = init_repo();
-        fs::write(dir.path().join("f"), "changed\n").unwrap();
-        assert_eq!(open(&dir).branch_status().unwrap(), Status::Unstaged);
+    fn branch_status_is_unstaged_on_worktree_change() -> Result<()> {
+        let dir = init_repo()?;
+        fs::write(dir.path().join("f"), "changed\n")?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::Unstaged);
+        Ok(())
     }
 
     #[test]
-    fn branch_status_ignores_untracked_files() {
-        let dir = init_repo();
-        fs::write(dir.path().join("untracked"), "x\n").unwrap();
-        assert_eq!(open(&dir).branch_status().unwrap(), Status::NotChanged);
+    fn branch_status_ignores_untracked_files() -> Result<()> {
+        let dir = init_repo()?;
+        fs::write(dir.path().join("untracked"), "x\n")?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::NotChanged);
+        Ok(())
     }
 
     #[test]
-    fn branch_status_is_conflicted_on_merge_conflict() {
-        let dir = init_repo();
-        git(dir.path(), &["checkout", "-q", "-b", "other"]);
-        fs::write(dir.path().join("f"), "theirs\n").unwrap();
-        git(dir.path(), &["commit", "-qam", "theirs"]);
-        git(dir.path(), &["checkout", "-q", "main"]);
-        fs::write(dir.path().join("f"), "ours\n").unwrap();
-        git(dir.path(), &["commit", "-qam", "ours"]);
+    fn branch_status_is_conflicted_on_merge_conflict() -> Result<()> {
+        let dir = init_repo()?;
+        git(dir.path(), &["checkout", "-q", "-b", "other"])?;
+        fs::write(dir.path().join("f"), "theirs\n")?;
+        git(dir.path(), &["commit", "-qam", "theirs"])?;
+        git(dir.path(), &["checkout", "-q", "main"])?;
+        fs::write(dir.path().join("f"), "ours\n")?;
+        git(dir.path(), &["commit", "-qam", "ours"])?;
         // Produce an unmerged index (stages 1-3 for `f`) with a 3-way read-tree.
         // This reproduces a merge conflict deterministically, without depending
         // on `git merge`, whose conflict behavior is environment-sensitive.
-        let base = git_stdout(dir.path(), &["merge-base", "main", "other"]);
+        let base = git_stdout(dir.path(), &["merge-base", "main", "other"])?;
         let base_tree = format!("{base}^{{tree}}");
         git(
             dir.path(),
             &["read-tree", "-m", &base_tree, "main^{tree}", "other^{tree}"],
-        );
-        assert_eq!(open(&dir).branch_status().unwrap(), Status::Conflicted);
+        )?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::Conflicted);
+        Ok(())
     }
 }
