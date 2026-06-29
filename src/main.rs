@@ -12,49 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate clap;
-
-use std::path::PathBuf;
 use std::process::exit;
 
 use ansi_term::Colour::{Green, Red, Yellow};
-use clap::{Arg, Command};
+use clap::Parser;
 
 use git_branch_status::branch_status::BranchStatus;
+use git_branch_status::cli::Cli;
 use git_branch_status::repository::Repository;
 
 fn main() {
-    let matches = Command::new("git-branch-status")
-        .version(env!("CARGO_PKG_VERSION"))
-        .author(env!("CARGO_PKG_AUTHORS"))
-        .about("Show git branch name colored by status")
-        .arg(
-            Arg::new("mode")
-                .short('m')
-                .long("mode")
-                .default_value("stdout")
-                .value_parser(["zsh", "stdout"])
-                .help("Sets a mode"),
-        )
-        .arg(
-            Arg::new("dir")
-                .value_name("DIR")
-                .value_hint(clap::ValueHint::DirPath)
-                .value_parser(clap::value_parser!(PathBuf))
-                .default_value(".")
-                .help("Path to the git repository (default: current directory)"),
-        )
-        .get_matches();
+    let cli = Cli::parse();
 
-    let Some(mode) = matches.get_one::<String>("mode") else {
-        exit(1)
-    };
-
-    let Some(dir) = matches.get_one::<PathBuf>("dir") else {
-        exit(1)
-    };
-
-    let Ok(repo) = Repository::discover(dir) else {
+    let Ok(repo) = Repository::discover(cli.dir) else {
         exit(1)
     };
 
@@ -66,7 +36,7 @@ fn main() {
         exit(1)
     };
 
-    match mode.as_str() {
+    match cli.mode.as_str() {
         "zsh" => match status {
             BranchStatus::NotChanged => print!("%F{{green}}{branch}%f"),
             BranchStatus::Staged => print!("%F{{yellow}}{branch}%f"),

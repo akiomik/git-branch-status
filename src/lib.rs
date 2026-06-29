@@ -13,5 +13,6 @@
 // limitations under the License.
 
 pub mod branch_status;
+pub mod cli;
 pub mod error;
 pub mod repository;
