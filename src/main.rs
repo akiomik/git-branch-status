@@ -14,6 +14,8 @@
 
 extern crate clap;
 
+use std::path::PathBuf;
+
 use ansi_term::Colour::{Green, Red, Yellow};
 use clap::{Arg, Command};
 
@@ -33,9 +35,18 @@ fn main() {
                 .value_parser(["zsh", "stdout"])
                 .help("Sets a mode"),
         )
+        .arg(
+            Arg::new("dir")
+                .value_name("DIR")
+                .value_hint(clap::ValueHint::DirPath)
+                .value_parser(clap::value_parser!(PathBuf))
+                .default_value(".")
+                .help("Path to the git repository (default: current directory)"),
+        )
         .get_matches();
 
-    let Ok(repo) = Repository::discover(".") else {
+    let dir = matches.get_one::<PathBuf>("dir").unwrap();
+    let Ok(repo) = Repository::discover(dir) else {
         std::process::exit(1)
     };
 
