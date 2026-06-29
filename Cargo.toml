@@ -30,6 +30,10 @@ lto = "thin"
 codegen-units = 1
 strip = true
 
+[profile.bench]
+debug = true
+strip = false
+
 [dev-dependencies]
 tempfile = "3"
 
