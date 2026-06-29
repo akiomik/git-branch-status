@@ -1,4 +1,7 @@
-default: fmt lint test
+default: fmt build lint test
+
+build:
+  cargo build
 
 fmt:
   cargo fmt --all
@@ -13,9 +16,9 @@ doc-check:
   RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items
 
 samply target=".":
-    cargo build --profile bench && samply record ./target/release/git-branch-status --mode zsh {{ target }}
+  cargo build --profile bench && samply record ./target/release/git-branch-status --mode zsh {{ target }}
 
 [macos]
 flamegraph target=".":
-    # See https://github.com/flamegraph-rs/flamegraph#dtrace-on-macos
-    cargo flamegraph --root --profile bench --open -- --mode zsh {{ target }}
+  # See https://github.com/flamegraph-rs/flamegraph#dtrace-on-macos
+  cargo flamegraph --root --profile bench --open -- --mode zsh {{ target }}
