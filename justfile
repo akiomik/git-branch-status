@@ -9,6 +9,9 @@ lint:
 test:
   cargo test
 
+doc-check:
+  RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items
+
 samply target=".":
     cargo build --profile bench && samply record ./target/release/git-branch-status --mode zsh {{ target }}
 
