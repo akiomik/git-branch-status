@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::error::Error as StdError;
 use std::fs;
 use std::path::Path;
 
 use gix::bstr::BString;
 use gix::commit::describe::SelectRef;
+use gix::head::Kind::{Detached, Symbolic, Unborn};
+use gix::progress::Discard;
+use gix::refs::FullNameRef;
 use gix::state::InProgress;
-use gix::status::Item as StatusItem;
-use gix::status::UntrackedFiles;
 use gix::status::index_worktree::Item as IndexWorktreeItem;
 use gix::status::plumbing::index_as_worktree::EntryStatus;
+use gix::status::{Item as StatusItem, UntrackedFiles};
 
 use crate::branch_status::BranchStatus;
 
@@ -32,11 +35,12 @@ use crate::branch_status::BranchStatus;
 /// the `Result` stays small.
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
-pub struct Error(Box<dyn std::error::Error + Send + Sync + 'static>);
+pub struct Error(Box<dyn StdError + Send + Sync + 'static>);
 
 macro_rules! impl_from_gix_error {
     ($($ty:ty),+ $(,)?) => {
         $(
+            #[allow(clippy::absolute_paths)]
             impl From<$ty> for Error {
                 fn from(err: $ty) -> Self {
                     Error(Box::new(err))
@@ -84,9 +88,9 @@ impl Repository {
             name
         } else {
             match &head.kind {
-                gix::head::Kind::Symbolic(reference) => reference.name.shorten().to_string(),
-                gix::head::Kind::Unborn(name) => Self::shorthand(name.as_ref()),
-                gix::head::Kind::Detached { target, .. } => {
+                Symbolic(reference) => reference.name.shorten().to_string(),
+                Unborn(name) => Self::shorthand(name.as_ref()),
+                Detached { target, .. } => {
                     // Prefer a tag pointing at HEAD, falling back to the short hash.
                     self.tag_name()
                         .or_else(|| self.short_id(*target))
@@ -110,7 +114,7 @@ impl Repository {
     pub fn branch_status(&self) -> Result<BranchStatus, Error> {
         let iter = self
             .0
-            .status(gix::progress::Discard)?
+            .status(Discard)?
             .untracked_files(UntrackedFiles::None)
             .into_iter(Vec::<BString>::new())?;
 
@@ -213,7 +217,7 @@ impl Repository {
             .to_string()
     }
 
-    fn shorthand(name: &gix::refs::FullNameRef) -> String {
+    fn shorthand(name: &FullNameRef) -> String {
         name.shorten().to_string()
     }
 }
