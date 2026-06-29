@@ -80,7 +80,7 @@ jobs:
           Compress-Archive -Path "target\${{ matrix.target }}\release\git-branch-status.exe" -DestinationPath $archive
           (Get-FileHash $archive -Algorithm SHA256).Hash | Out-File -FilePath "$archive.sha256" -NoNewline
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             git-branch-status-*.tar.gz
