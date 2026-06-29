@@ -49,8 +49,6 @@ RPROMPT='$(git branch-status --mode zsh)'
 Add the following to `~/.config/starship.toml`:
 
 ```toml
-command_timeout = 1000
-
 format = """
 $directory\
 $custom\
@@ -63,17 +61,11 @@ when = "git rev-parse --is-inside-work-tree 2>/dev/null"
 format = " on $output"
 ```
 
-Starship aborts any custom command that runs longer than
-[`command_timeout`](https://starship.rs/config/#prompt) (500ms by default) and
-shows a warning instead of its output. In large repositories `git-branch-status`
-can take longer than that, so raise `command_timeout` (e.g. to 1000ms) if the
-module disappears or you see a timeout warning.
-
 ## Benchmark
 
 ### Against vcs_info
 
-Run `./scripts/bench-vcs-info.sh`. `git-branch-status` is about 5x faster than `vcs_info` on M1 MacBook Pro (2021).
+Run `./scripts/bench-vcs-info.sh`. `git-branch-status` is about 7x faster than `vcs_info` on M1 MacBook Pro (2021).
 
 ```sh
 ❯ ./scripts/bench-vcs-info.sh
@@ -82,11 +74,11 @@ Setup git-branch-status...done!
 
 Run 'vcs_info; echo $vcs_info_msg_0_' 100 times
 ....................................................................................................done!
-Elapsed time: 2029ms
+Elapsed time: 7127ms
 
 Run './target/release/git-branch-status --mode zsh' 100 times
 ....................................................................................................done!
-Elapsed time: 404ms
+Elapsed time: 1061ms
 ```
 
 ### git-branch-status on its own
@@ -100,6 +92,6 @@ many runs.
 ❯ ./scripts/bench.sh
 Building git-branch-status...
 Benchmark 1: ./target/release/git-branch-status --mode zsh
-  Time (mean ± σ):       8.2 ms ±   0.4 ms    [User: 2.8 ms, System: 2.9 ms]
-  Range (min … max):     7.7 ms …  10.7 ms    327 runs
+  Time (mean ± σ):       7.1 ms ±   0.4 ms    [User: 2.3 ms, System: 3.7 ms]
+  Range (min … max):     6.3 ms …   8.5 ms    418 runs
 ```

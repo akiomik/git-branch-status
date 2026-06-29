@@ -20,9 +20,10 @@ include = [
 ]
 
 [dependencies]
-git2 = "0.21"
 ansi_term = "0.12"
 clap = "4.6.1"
+gix = { version = "=0.85.0", default-features = false, features = ["status", "revision", "max-performance-safe", "sha1"] }
+thiserror = "2.0.18"
 
 [dev-dependencies]
 tempfile = "3"

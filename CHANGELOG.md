@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replace the libgit2 (`git2`) backend with the pure-Rust `gix` (gitoxide). This
+  makes `git-branch-status` about 22x faster in large repositories (e.g. roughly
+  2.0 s to 92 ms on a 28k-file repository) and drops the libgit2/OpenSSL C
+  dependency, so the binary is now pure Rust
+
 ## [0.1.1] - 2026-06-29
 
 ### Fixed
