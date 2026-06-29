@@ -19,6 +19,7 @@ use clap::Parser;
 
 use git_branch_status::branch_status::BranchStatus;
 use git_branch_status::cli::Cli;
+use git_branch_status::mode::Mode;
 use git_branch_status::repository::Repository;
 
 fn main() {
@@ -36,16 +37,16 @@ fn main() {
         exit(1)
     };
 
-    match cli.mode.as_str() {
-        "zsh" => match status {
-            BranchStatus::NotChanged => print!("%F{{green}}{branch}%f"),
-            BranchStatus::Staged => print!("%F{{yellow}}{branch}%f"),
-            BranchStatus::Unstaged | BranchStatus::Conflicted => print!("%F{{red}}{branch}%f"),
-        },
-        _ => match status {
+    match cli.mode {
+        Mode::Stdout => match status {
             BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
             BranchStatus::Staged => print!("{}", Yellow.paint(branch)),
             BranchStatus::Unstaged | BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
+        },
+        Mode::Zsh => match status {
+            BranchStatus::NotChanged => print!("%F{{green}}{branch}%f"),
+            BranchStatus::Staged => print!("%F{{yellow}}{branch}%f"),
+            BranchStatus::Unstaged | BranchStatus::Conflicted => print!("%F{{red}}{branch}%f"),
         },
     }
 }
