@@ -42,3 +42,19 @@ impl_from_gix_error!(
     gix::status::into_iter::Error,
     gix::status::iter::Error,
 );
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn test_impl_from_gix_error() {
+        let _ = Error::from(gix::discover::Error::Discover(
+            gix::discover::upwards::Error::NoGitRepository {
+                path: Path::new(".").to_path_buf(),
+            },
+        ));
+    }
+}
