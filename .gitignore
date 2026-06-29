@@ -1,2 +1,4 @@
 /target
 .*.md
+flamegraph.svg
+profile.json.gz
