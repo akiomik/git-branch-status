@@ -12,10 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Debug, PartialEq, Eq, PartialOrd)]
-pub enum BranchStatus {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+pub enum Status {
     NotChanged,
     Staged,
     Unstaged,
     Conflicted,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Branch {
+    pub name: String,
+    pub status: Status,
 }
