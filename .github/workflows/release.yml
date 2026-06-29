@@ -20,9 +20,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
             use-cross: false
           # aarch64 requires cross-compilation since the host is x86_64. We use cross (Docker-based)
-          # instead of plain cargo because cross's images ship with a pre-built OpenSSL for each
-          # target, eliminating the need to manually set up a cross-compiled OpenSSL environment
-          # that git2 depends on.
+          # instead of plain cargo because its images bundle the aarch64 GNU toolchain (linker and
+          # sysroot), so we don't have to install and configure a cross-linker ourselves.
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             use-cross: true
@@ -52,14 +51,6 @@ jobs:
       - name: Add Rust target
         if: "!matrix.use-cross"
         run: rustup target add ${{ matrix.target }}
-
-      # git2 depends on OpenSSL. For native Linux builds we install it explicitly; cross builds
-      # resolve it inside the container; macOS and Windows toolchains handle it automatically.
-      - name: Install system dependencies
-        if: runner.os == 'Linux' && !matrix.use-cross
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
 
       - uses: taiki-e/install-action@v2
         if: matrix.use-cross
