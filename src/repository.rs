@@ -195,44 +195,43 @@ mod tests {
     use super::*;
 
     use anyhow::Result;
-    use std::fs;
-    use std::process::Command;
-    use tempfile::TempDir;
+    use assert_cmd::Command;
+    use assert_fs::TempDir;
+    use assert_fs::prelude::*;
 
     /// Run `git` in `dir`, neutralizing the user's global signing config and
     /// pinning identity so fixtures are hermetic.
-    fn git(dir: &Path, args: &[&str]) -> Result<()> {
+    fn git(dir: &Path, args: &[&str]) {
         let mut full = vec!["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"];
         full.extend_from_slice(args);
-        let out = Command::new("git")
+        Command::new("git")
             .current_dir(dir)
             .args(&full)
             .env("GIT_AUTHOR_NAME", "tester")
             .env("GIT_AUTHOR_EMAIL", "tester@example.com")
             .env("GIT_COMMITTER_NAME", "tester")
             .env("GIT_COMMITTER_EMAIL", "tester@example.com")
-            .output()?;
-        assert!(
-            out.status.success(),
-            "git {args:?} failed: {}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        Ok(())
+            .assert()
+            .success();
     }
 
     fn git_stdout(dir: &Path, args: &[&str]) -> Result<String> {
-        let out = Command::new("git").current_dir(dir).args(args).output()?;
-        assert!(out.status.success());
+        let cmd = Command::new("git")
+            .current_dir(dir)
+            .args(args)
+            .assert()
+            .success();
+        let out = cmd.get_output().to_owned();
         Ok(String::from_utf8(out.stdout)?.trim().to_string())
     }
 
     /// A repository with a single committed file on `main`.
     fn init_repo() -> Result<TempDir> {
         let dir = TempDir::new()?;
-        git(dir.path(), &["init", "-q", "-b", "main"])?;
-        fs::write(dir.path().join("f"), "a\n")?;
-        git(dir.path(), &["add", "f"])?;
-        git(dir.path(), &["commit", "-qm", "init"])?;
+        dir.child("f").write_str("a\n")?;
+        git(dir.path(), &["init", "-q", "-b", "main"]);
+        git(dir.path(), &["add", "f"]);
+        git(dir.path(), &["commit", "-qm", "init"]);
         Ok(dir)
     }
 
@@ -243,43 +242,43 @@ mod tests {
     #[test]
     fn branch_name_returns_branch_on_unborn_branch() -> Result<()> {
         let dir = TempDir::new()?;
-        git(dir.path(), &["init", "-q", "-b", "main"])?;
+        git(dir.path(), &["init", "-q", "-b", "main"]);
         assert_eq!(open(&dir)?.branch_name()?, "main");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_name_returns_branch_on_normal_branch() -> Result<()> {
         let dir = init_repo()?;
         assert_eq!(open(&dir)?.branch_name()?, "main");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_name_returns_short_hash_on_detached_head() -> Result<()> {
         let dir = init_repo()?;
-        git(dir.path(), &["checkout", "-q", "--detach", "HEAD"])?;
+        git(dir.path(), &["checkout", "-q", "--detach", "HEAD"]);
         let short = git_stdout(dir.path(), &["rev-parse", "--short", "HEAD"])?;
         assert_eq!(open(&dir)?.branch_name()?, short);
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_name_returns_lightweight_tag_on_detached_head_at_tag() -> Result<()> {
         let dir = init_repo()?;
-        git(dir.path(), &["tag", "v1.0.0"])?;
-        git(dir.path(), &["checkout", "-q", "--detach", "v1.0.0"])?;
+        git(dir.path(), &["tag", "v1.0.0"]);
+        git(dir.path(), &["checkout", "-q", "--detach", "v1.0.0"]);
         assert_eq!(open(&dir)?.branch_name()?, "v1.0.0");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_name_returns_annotated_tag_on_detached_head_at_tag() -> Result<()> {
         let dir = init_repo()?;
-        git(dir.path(), &["tag", "-a", "v2.0.0", "-m", "rel"])?;
-        git(dir.path(), &["checkout", "-q", "--detach", "v2.0.0"])?;
+        git(dir.path(), &["tag", "-a", "v2.0.0", "-m", "rel"]);
+        git(dir.path(), &["checkout", "-q", "--detach", "v2.0.0"]);
         assert_eq!(open(&dir)?.branch_name()?, "v2.0.0");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
@@ -289,77 +288,73 @@ mod tests {
         // directly rather than via `git merge`, whose conflict behavior is
         // environment-sensitive (e.g. it can no-op on some CI runners).
         let head = git_stdout(dir.path(), &["rev-parse", "HEAD"])?;
-        fs::write(
-            dir.path().join(".git").join("MERGE_HEAD"),
-            format!("{head}\n"),
-        )?;
+        dir.child(".git/MERGE_HEAD")
+            .write_str(&format!("{head}\n"))?;
         assert_eq!(open(&dir)?.branch_name()?, "main:merge");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_name_uses_rebase_merge_head_name_during_interactive_rebase() -> Result<()> {
         let dir = init_repo()?;
-        let rebase_dir = dir.path().join(".git").join("rebase-merge");
-        fs::create_dir_all(&rebase_dir)?;
-        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n")?;
-        fs::write(rebase_dir.join("interactive"), "")?;
+        dir.child(".git/rebase-merge/head-name")
+            .write_str("refs/heads/feature\n")?;
+        dir.child(".git/rebase-merge/interactive").touch()?;
         assert_eq!(open(&dir)?.branch_name()?, "feature:rebase-i");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_name_uses_rebase_apply_head_name_during_apply_rebase() -> Result<()> {
         let dir = init_repo()?;
-        let rebase_dir = dir.path().join(".git").join("rebase-apply");
-        fs::create_dir_all(&rebase_dir)?;
-        fs::write(rebase_dir.join("head-name"), "refs/heads/feature\n")?;
-        fs::write(rebase_dir.join("rebasing"), "")?;
+        dir.child(".git/rebase-apply/head-name")
+            .write_str("refs/heads/feature\n")?;
+        dir.child(".git/rebase-apply/rebasing").touch()?;
         assert_eq!(open(&dir)?.branch_name()?, "feature:rebase");
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_status_is_not_changed_on_clean_tree() -> Result<()> {
         let dir = init_repo()?;
         assert_eq!(open(&dir)?.branch_status()?, Status::NotChanged);
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_status_is_staged_on_staged_change() -> Result<()> {
         let dir = init_repo()?;
-        fs::write(dir.path().join("g"), "b\n")?;
-        git(dir.path(), &["add", "g"])?;
+        dir.child("g").write_str("b\n")?;
+        git(dir.path(), &["add", "g"]);
         assert_eq!(open(&dir)?.branch_status()?, Status::Staged);
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_status_is_unstaged_on_worktree_change() -> Result<()> {
         let dir = init_repo()?;
-        fs::write(dir.path().join("f"), "changed\n")?;
+        dir.child("f").write_str("changed\n")?;
         assert_eq!(open(&dir)?.branch_status()?, Status::Unstaged);
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_status_ignores_untracked_files() -> Result<()> {
         let dir = init_repo()?;
-        fs::write(dir.path().join("untracked"), "x\n")?;
+        dir.child("untracked").write_str("x\n")?;
         assert_eq!(open(&dir)?.branch_status()?, Status::NotChanged);
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 
     #[test]
     fn branch_status_is_conflicted_on_merge_conflict() -> Result<()> {
         let dir = init_repo()?;
-        git(dir.path(), &["checkout", "-q", "-b", "other"])?;
-        fs::write(dir.path().join("f"), "theirs\n")?;
-        git(dir.path(), &["commit", "-qam", "theirs"])?;
-        git(dir.path(), &["checkout", "-q", "main"])?;
-        fs::write(dir.path().join("f"), "ours\n")?;
-        git(dir.path(), &["commit", "-qam", "ours"])?;
+        git(dir.path(), &["checkout", "-q", "-b", "other"]);
+        dir.child("f").write_str("theirs\n")?;
+        git(dir.path(), &["commit", "-qam", "theirs"]);
+        git(dir.path(), &["checkout", "-q", "main"]);
+        dir.child("f").write_str("ours\n")?;
+        git(dir.path(), &["commit", "-qam", "ours"]);
         // Produce an unmerged index (stages 1-3 for `f`) with a 3-way read-tree.
         // This reproduces a merge conflict deterministically, without depending
         // on `git merge`, whose conflict behavior is environment-sensitive.
@@ -368,8 +363,8 @@ mod tests {
         git(
             dir.path(),
             &["read-tree", "-m", &base_tree, "main^{tree}", "other^{tree}"],
-        )?;
+        );
         assert_eq!(open(&dir)?.branch_status()?, Status::Conflicted);
-        Ok(())
+        dir.close().map_err(Into::into)
     }
 }
