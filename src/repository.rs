@@ -25,7 +25,7 @@ use gix::status::index_worktree::Item as IndexWorktreeItem;
 use gix::status::plumbing::index_as_worktree::EntryStatus;
 use gix::status::{Item as StatusItem, UntrackedFiles};
 
-use crate::branch_status::BranchStatus;
+use crate::branch::Status;
 use crate::error::Error;
 
 /// A thin wrapper over [`gix::Repository`] exposing only the operations this tool
@@ -81,32 +81,30 @@ impl Repository {
     ///
     /// Returns an error if the status iterator cannot be created or yields an
     /// error while iterating.
-    pub fn branch_status(&self) -> Result<BranchStatus, Error> {
+    pub fn branch_status(&self) -> Result<Status, Error> {
         let iter = self
             .0
             .status(Discard)?
             .untracked_files(UntrackedFiles::None)
             .into_iter(Vec::<BString>::new())?;
 
-        let mut status = BranchStatus::NotChanged;
+        let mut status = Status::NotChanged;
         for item in iter {
             let next = match item? {
                 // HEAD <-> index: a staged change.
-                StatusItem::TreeIndex(_) => BranchStatus::Staged,
+                StatusItem::TreeIndex(_) => Status::Staged,
                 // index <-> worktree: an unstaged change or a conflict.
                 StatusItem::IndexWorktree(IndexWorktreeItem::Modification {
                     status: entry,
                     ..
                 }) => match entry {
-                    EntryStatus::Conflict { .. } => BranchStatus::Conflicted,
-                    EntryStatus::Change(_) => BranchStatus::Unstaged,
+                    EntryStatus::Conflict { .. } => Status::Conflicted,
+                    EntryStatus::Change(_) => Status::Unstaged,
                     // Stat-only refresh or `--intent-to-add`: nothing changed.
                     EntryStatus::NeedsUpdate(_) | EntryStatus::IntentToAdd => continue,
                 },
                 // A rename detected against the index counts as unstaged.
-                StatusItem::IndexWorktree(IndexWorktreeItem::Rewrite { .. }) => {
-                    BranchStatus::Unstaged
-                }
+                StatusItem::IndexWorktree(IndexWorktreeItem::Rewrite { .. }) => Status::Unstaged,
                 // Untracked entries are excluded by `UntrackedFiles::None`.
                 StatusItem::IndexWorktree(IndexWorktreeItem::DirectoryContents { .. }) => continue,
             };
@@ -114,7 +112,7 @@ impl Repository {
             if next > status {
                 status = next;
             }
-            if status == BranchStatus::Conflicted {
+            if status == Status::Conflicted {
                 break;
             }
         }
@@ -195,7 +193,7 @@ impl Repository {
 #[cfg(test)]
 mod tests {
     use super::Repository;
-    use crate::branch_status::BranchStatus;
+    use crate::branch::Status;
     use std::fs;
     use std::path::Path;
     use std::process::Command;
@@ -321,10 +319,7 @@ mod tests {
     #[test]
     fn branch_status_is_not_changed_on_clean_tree() {
         let dir = init_repo();
-        assert_eq!(
-            open(&dir).branch_status().unwrap(),
-            BranchStatus::NotChanged
-        );
+        assert_eq!(open(&dir).branch_status().unwrap(), Status::NotChanged);
     }
 
     #[test]
@@ -332,24 +327,21 @@ mod tests {
         let dir = init_repo();
         fs::write(dir.path().join("g"), "b\n").unwrap();
         git(dir.path(), &["add", "g"]);
-        assert_eq!(open(&dir).branch_status().unwrap(), BranchStatus::Staged);
+        assert_eq!(open(&dir).branch_status().unwrap(), Status::Staged);
     }
 
     #[test]
     fn branch_status_is_unstaged_on_worktree_change() {
         let dir = init_repo();
         fs::write(dir.path().join("f"), "changed\n").unwrap();
-        assert_eq!(open(&dir).branch_status().unwrap(), BranchStatus::Unstaged);
+        assert_eq!(open(&dir).branch_status().unwrap(), Status::Unstaged);
     }
 
     #[test]
     fn branch_status_ignores_untracked_files() {
         let dir = init_repo();
         fs::write(dir.path().join("untracked"), "x\n").unwrap();
-        assert_eq!(
-            open(&dir).branch_status().unwrap(),
-            BranchStatus::NotChanged
-        );
+        assert_eq!(open(&dir).branch_status().unwrap(), Status::NotChanged);
     }
 
     #[test]
@@ -370,9 +362,6 @@ mod tests {
             dir.path(),
             &["read-tree", "-m", &base_tree, "main^{tree}", "other^{tree}"],
         );
-        assert_eq!(
-            open(&dir).branch_status().unwrap(),
-            BranchStatus::Conflicted
-        );
+        assert_eq!(open(&dir).branch_status().unwrap(), Status::Conflicted);
     }
 }

@@ -14,39 +14,29 @@
 
 use std::process::exit;
 
-use ansi_term::Colour::{Green, Red, Yellow};
 use clap::Parser;
 
-use git_branch_status::branch_status::BranchStatus;
+use git_branch_status::branch::Branch;
 use git_branch_status::cli::Cli;
-use git_branch_status::mode::Mode;
+use git_branch_status::error::Error;
 use git_branch_status::repository::Repository;
+
+fn run(cli: Cli) -> Result<String, Error> {
+    let repo = Repository::discover(cli.dir)?;
+    let branch = Branch {
+        name: repo.branch_name()?,
+        status: repo.branch_status()?,
+    };
+    let output = cli.mode.format(&branch);
+
+    Ok(output)
+}
 
 fn main() {
     let cli = Cli::parse();
 
-    let Ok(repo) = Repository::discover(cli.dir) else {
-        exit(1)
-    };
-
-    let Ok(branch) = repo.branch_name() else {
-        exit(1)
-    };
-
-    let Ok(status) = repo.branch_status() else {
-        exit(1)
-    };
-
-    match cli.mode {
-        Mode::Stdout => match status {
-            BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
-            BranchStatus::Staged => print!("{}", Yellow.paint(branch)),
-            BranchStatus::Unstaged | BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
-        },
-        Mode::Zsh => match status {
-            BranchStatus::NotChanged => print!("%F{{green}}{branch}%f"),
-            BranchStatus::Staged => print!("%F{{yellow}}{branch}%f"),
-            BranchStatus::Unstaged | BranchStatus::Conflicted => print!("%F{{red}}{branch}%f"),
-        },
+    match run(cli) {
+        Ok(output) => print!("{output}"),
+        Err(_) => exit(1),
     }
 }
