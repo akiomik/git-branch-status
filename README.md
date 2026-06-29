@@ -1,5 +1,8 @@
 # git-branch-status
 
+[![Rust CI](https://github.com/akiomik/git-branch-status/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/akiomik/git-branch-status/actions/workflows/rust-ci.yml)
+[![codecov](https://codecov.io/gh/akiomik/git-branch-status/graph/badge.svg?token=3DQ0VAV2NP)](https://codecov.io/gh/akiomik/git-branch-status)
+
 A command line tool for displaying git branch colored by status, like zsh's [vcs_info](https://zsh.sourceforge.io/Doc/Release/User-Contributions.html#Version-Control-Information).
 
 ![screenshot](screenshot.png?raw=true)
