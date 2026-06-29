@@ -15,6 +15,7 @@
 extern crate clap;
 
 use std::path::PathBuf;
+use std::process::exit;
 
 use ansi_term::Colour::{Green, Red, Yellow};
 use clap::{Arg, Command};
@@ -45,21 +46,27 @@ fn main() {
         )
         .get_matches();
 
-    let dir = matches.get_one::<PathBuf>("dir").unwrap();
+    let Some(mode) = matches.get_one::<String>("mode") else {
+        exit(1)
+    };
+
+    let Some(dir) = matches.get_one::<PathBuf>("dir") else {
+        exit(1)
+    };
+
     let Ok(repo) = Repository::discover(dir) else {
-        std::process::exit(1)
+        exit(1)
     };
 
     let Ok(branch) = repo.branch_name() else {
-        std::process::exit(1)
+        exit(1)
     };
 
     let Ok(status) = repo.branch_status() else {
-        std::process::exit(1)
+        exit(1)
     };
 
-    let mode = matches.get_one::<String>("mode").unwrap().as_str();
-    match mode {
+    match mode.as_str() {
         "zsh" => match status {
             BranchStatus::NotChanged => print!("%F{{green}}{branch}%f"),
             BranchStatus::Staged => print!("%F{{yellow}}{branch}%f"),
