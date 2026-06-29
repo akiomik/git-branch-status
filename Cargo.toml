@@ -36,6 +36,8 @@ strip = false
 
 [dev-dependencies]
 anyhow = "1"
+assert_cmd = "2"
+assert_fs = "1"
 tempfile = "3"
 
 [lints.clippy]
