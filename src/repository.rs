@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::error::Error as StdError;
 use std::fs;
 use std::path::Path;
 
@@ -27,36 +26,7 @@ use gix::status::plumbing::index_as_worktree::EntryStatus;
 use gix::status::{Item as StatusItem, UntrackedFiles};
 
 use crate::branch_status::BranchStatus;
-
-/// The single domain error for the `gix` backend.
-///
-/// The many per-operation `gix` error types (some of which are large) are boxed
-/// behind this one type, so the rest of the crate never names a `gix` type and
-/// the `Result` stays small.
-#[derive(Debug, thiserror::Error)]
-#[error(transparent)]
-pub struct Error(Box<dyn StdError + Send + Sync + 'static>);
-
-macro_rules! impl_from_gix_error {
-    ($($ty:ty),+ $(,)?) => {
-        $(
-            #[allow(clippy::absolute_paths)]
-            impl From<$ty> for Error {
-                fn from(err: $ty) -> Self {
-                    Error(Box::new(err))
-                }
-            }
-        )+
-    };
-}
-
-impl_from_gix_error!(
-    gix::discover::Error,
-    gix::reference::find::existing::Error,
-    gix::status::Error,
-    gix::status::into_iter::Error,
-    gix::status::iter::Error,
-);
+use crate::error::Error;
 
 /// A thin wrapper over [`gix::Repository`] exposing only the operations this tool
 /// needs, keeping all `gix` types contained to this module.
