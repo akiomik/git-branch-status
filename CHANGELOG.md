@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Accept an optional `[DIR]` positional argument to specify the git repository
+  path (e.g. `git-branch-status --mode zsh /path/to/repo`). Defaults to `.`
+  when omitted, preserving the previous behavior.
+
 ### Changed
 
 - Replace the libgit2 (`git2`) backend with the pure-Rust `gix` (gitoxide). This
