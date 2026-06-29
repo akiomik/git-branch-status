@@ -35,38 +35,29 @@ fn main() {
         )
         .get_matches();
 
-    let repo = match Repository::discover(".") {
-        Ok(repo) => repo,
-        Err(_) => std::process::exit(1),
+    let Ok(repo) = Repository::discover(".") else {
+        std::process::exit(1)
     };
 
-    let branch = match repo.branch_name() {
-        Ok(branch) => branch,
-        Err(_) => std::process::exit(1),
+    let Ok(branch) = repo.branch_name() else {
+        std::process::exit(1)
     };
 
-    let status = match repo.branch_status() {
-        Ok(status) => status,
-        Err(_) => std::process::exit(1),
+    let Ok(status) = repo.branch_status() else {
+        std::process::exit(1)
     };
 
     let mode = matches.get_one::<String>("mode").unwrap().as_str();
     match mode {
-        "zsh" => {
-            match status {
-                BranchStatus::NotChanged => print!("%F{{green}}{}%f", branch),
-                BranchStatus::Staged => print!("%F{{yellow}}{}%f", branch),
-                BranchStatus::Unstaged => print!("%F{{red}}{}%f", branch),
-                BranchStatus::Conflicted => print!("%F{{red}}{}%f", branch),
-            };
-        }
-        _ => {
-            match status {
-                BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
-                BranchStatus::Staged => print!("{}", Yellow.paint(branch)),
-                BranchStatus::Unstaged => print!("{}", Red.paint(branch)),
-                BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
-            };
-        }
-    };
+        "zsh" => match status {
+            BranchStatus::NotChanged => print!("%F{{green}}{branch}%f"),
+            BranchStatus::Staged => print!("%F{{yellow}}{branch}%f"),
+            BranchStatus::Unstaged | BranchStatus::Conflicted => print!("%F{{red}}{branch}%f"),
+        },
+        _ => match status {
+            BranchStatus::NotChanged => print!("{}", Green.paint(branch)),
+            BranchStatus::Staged => print!("{}", Yellow.paint(branch)),
+            BranchStatus::Unstaged | BranchStatus::Conflicted => print!("{}", Red.paint(branch)),
+        },
+    }
 }

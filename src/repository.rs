@@ -60,12 +60,20 @@ pub struct Repository(gix::Repository);
 
 impl Repository {
     /// Discover a repository starting from `path` and walking up to the root.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no git repository is found at or above `path`.
     pub fn discover(path: impl AsRef<Path>) -> Result<Self, Error> {
         Ok(Self(gix::discover(path)?))
     }
 
     /// The branch name to display, optionally suffixed with the in-progress
     /// action (e.g. `main:rebase-i`).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HEAD reference cannot be resolved.
     pub fn branch_name(&self) -> Result<String, Error> {
         let head = self.0.head()?;
         let state = self.0.state();
@@ -94,6 +102,11 @@ impl Repository {
     }
 
     /// The worst status across the working tree, ignoring untracked files.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the status iterator cannot be created or yields an
+    /// error while iterating.
     pub fn branch_status(&self) -> Result<BranchStatus, Error> {
         let iter = self
             .0
