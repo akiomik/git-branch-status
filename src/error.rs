@@ -41,6 +41,7 @@ impl_from_gix_error!(
     gix::status::Error,
     gix::status::into_iter::Error,
     gix::status::iter::Error,
+    gix::worktree::open_index::Error,
 );
 
 #[cfg(test)]
