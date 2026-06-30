@@ -82,42 +82,60 @@ impl Repository {
     /// Returns an error if the status iterator cannot be created or yields an
     /// error while iterating.
     pub fn branch_status(&self) -> Result<Status, Error> {
+        // A conflict is the worst status, and it is recorded in the index as
+        // unmerged entries (stage != 0). Detecting it from the in-memory index
+        // avoids the expensive worktree scan entirely when one exists.
+        if self.has_conflicts()? {
+            return Ok(Status::Conflicted);
+        }
+
         let iter = self
             .0
             .status(Discard)?
             .untracked_files(UntrackedFiles::None)
             .into_iter(Vec::<BString>::new())?;
 
+        // With conflicts ruled out, an unstaged change is the worst remaining
+        // status, so the worktree scan can stop at the first one it finds
+        // instead of walking the whole tree.
         let mut status = Status::NotChanged;
         for item in iter {
-            let next = match item? {
+            match item? {
                 // HEAD <-> index: a staged change.
-                StatusItem::TreeIndex(_) => Status::Staged,
-                // index <-> worktree: an unstaged change or a conflict.
+                StatusItem::TreeIndex(_) => {
+                    if Status::Staged > status {
+                        status = Status::Staged;
+                    }
+                }
+                // index <-> worktree: an unstaged change.
                 StatusItem::IndexWorktree(IndexWorktreeItem::Modification {
                     status: entry,
                     ..
                 }) => match entry {
-                    EntryStatus::Conflict { .. } => Status::Conflicted,
-                    EntryStatus::Change(_) => Status::Unstaged,
+                    EntryStatus::Change(_) => return Ok(Status::Unstaged),
+                    // A conflict would have been caught by `has_conflicts`, but
+                    // handle it defensively rather than misreporting it.
+                    EntryStatus::Conflict { .. } => return Ok(Status::Conflicted),
                     // Stat-only refresh or `--intent-to-add`: nothing changed.
-                    EntryStatus::NeedsUpdate(_) | EntryStatus::IntentToAdd => continue,
+                    EntryStatus::NeedsUpdate(_) | EntryStatus::IntentToAdd => {}
                 },
                 // A rename detected against the index counts as unstaged.
-                StatusItem::IndexWorktree(IndexWorktreeItem::Rewrite { .. }) => Status::Unstaged,
+                StatusItem::IndexWorktree(IndexWorktreeItem::Rewrite { .. }) => {
+                    return Ok(Status::Unstaged);
+                }
                 // Untracked entries are excluded by `UntrackedFiles::None`.
-                StatusItem::IndexWorktree(IndexWorktreeItem::DirectoryContents { .. }) => continue,
-            };
-
-            if next > status {
-                status = next;
-            }
-            if status == Status::Conflicted {
-                break;
+                StatusItem::IndexWorktree(IndexWorktreeItem::DirectoryContents { .. }) => {}
             }
         }
 
         Ok(status)
+    }
+
+    /// Whether the index has any unmerged entries, i.e. a conflict is in
+    /// progress. Unmerged entries carry a non-zero stage (base/ours/theirs).
+    fn has_conflicts(&self) -> Result<bool, Error> {
+        let index = self.0.index_or_empty()?;
+        Ok(index.entries().iter().any(|entry| entry.stage_raw() != 0))
     }
 
     /// Map an in-progress operation to the suffix shown after the branch name.
@@ -335,6 +353,42 @@ mod tests {
         let dir = init_repo()?;
         dir.child("f").write_str("changed\n")?;
         assert_eq!(open(&dir)?.branch_status()?, Status::Unstaged);
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_status_prefers_unstaged_over_staged_when_both_present() -> Result<()> {
+        let dir = init_repo()?;
+        // A staged addition and an unstaged worktree change at the same time:
+        // the worse (unstaged) status must win regardless of iteration order.
+        dir.child("g").write_str("b\n")?;
+        git(dir.path(), &["add", "g"]);
+        dir.child("f").write_str("changed\n")?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::Unstaged);
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_status_prefers_conflict_over_unstaged_when_both_present() -> Result<()> {
+        let dir = init_repo()?;
+        git(dir.path(), &["checkout", "-q", "-b", "other"]);
+        dir.child("f").write_str("theirs\n")?;
+        git(dir.path(), &["commit", "-qam", "theirs"]);
+        git(dir.path(), &["checkout", "-q", "main"]);
+        dir.child("f").write_str("ours\n")?;
+        git(dir.path(), &["commit", "-qam", "ours"]);
+        let base = git_stdout(dir.path(), &["merge-base", "main", "other"])?;
+        let base_tree = format!("{base}^{{tree}}");
+        git(
+            dir.path(),
+            &["read-tree", "-m", &base_tree, "main^{tree}", "other^{tree}"],
+        );
+        // An additional plain worktree change on top of the conflict must not
+        // downgrade the reported status away from conflicted.
+        dir.child("extra").write_str("x\n")?;
+        git(dir.path(), &["add", "extra"]);
+        dir.child("extra").write_str("y\n")?;
+        assert_eq!(open(&dir)?.branch_status()?, Status::Conflicted);
         dir.close().map_err(Into::into)
     }
 
