@@ -23,6 +23,7 @@ use gix::refs::FullNameRef;
 use gix::state::InProgress;
 use gix::status::index_worktree::Item as IndexWorktreeItem;
 use gix::status::plumbing::index_as_worktree::EntryStatus;
+use gix::status::tree_index::TrackRenames;
 use gix::status::{Item as StatusItem, UntrackedFiles};
 
 use crate::branch::Status;
@@ -93,6 +94,11 @@ impl Repository {
             .0
             .status(Discard)?
             .untracked_files(UntrackedFiles::None)
+            // Rename detection (on by default) reads blob contents to compute
+            // similarity, which is pure overhead here: a rename maps to the same
+            // staged/unstaged status as a separate delete and add would.
+            .index_worktree_rewrites(None)
+            .tree_index_track_renames(TrackRenames::Disabled)
             .into_iter(Vec::<BString>::new())?;
 
         // With conflicts ruled out, an unstaged change is the worst remaining
@@ -119,7 +125,8 @@ impl Repository {
                     // Stat-only refresh or `--intent-to-add`: nothing changed.
                     EntryStatus::NeedsUpdate(_) | EntryStatus::IntentToAdd => {}
                 },
-                // A rename detected against the index counts as unstaged.
+                // Rewrites are disabled above, but were one to slip through it
+                // would still be an unstaged worktree change.
                 StatusItem::IndexWorktree(IndexWorktreeItem::Rewrite { .. }) => {
                     return Ok(Status::Unstaged);
                 }

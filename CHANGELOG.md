@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Speed up status detection by short-circuiting the worktree scan. Conflicts are
   now detected from the index up front, and the scan stops at the first unstaged
   change instead of always walking the entire worktree.
+- Disable rename detection during status detection. It read blob contents to
+  compute similarity without affecting the reported status, so turning it off
+  removes that overhead.
 
 ## [0.2.0] - 2026-06-30
 
