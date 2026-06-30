@@ -12,7 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+/// The worst change present in the working tree.
+///
+/// In increasing order of severity: `Conflicted` > `Unstaged` > `Staged` >
+/// `NotChanged`. This precedence is a domain decision applied explicitly by
+/// [`Repository::branch_status`](crate::repository::Repository::branch_status),
+/// not derived from this declaration order, so the variants can be reordered
+/// freely without changing behavior.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
     NotChanged,
     Staged,
