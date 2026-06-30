@@ -19,6 +19,8 @@ fn execute_failure_with_dir() -> Result<()> {
         .arg("non-existent")
         .assert()
         .failure()
-        .code(1);
+        .code(1)
+        .stdout("")
+        .stderr("");
     Ok(())
 }
