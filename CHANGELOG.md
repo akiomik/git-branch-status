@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-30
+
 ### Changed
 
 - Speed up status detection by short-circuiting the worktree scan. Conflicts are
@@ -49,7 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[unreleased]: https://github.com/akiomik/git-branch-status/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/akiomik/git-branch-status/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/akiomik/git-branch-status/releases/tag/v0.2.1
 [0.2.0]: https://github.com/akiomik/git-branch-status/releases/tag/v0.2.0
 [0.1.1]: https://github.com/akiomik/git-branch-status/releases/tag/v0.1.1
 [0.1.0]: https://github.com/akiomik/git-branch-status/releases/tag/v0.1.0
