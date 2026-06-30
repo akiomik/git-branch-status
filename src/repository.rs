@@ -107,12 +107,9 @@ impl Repository {
         let mut status = Status::NotChanged;
         for item in iter {
             match item? {
-                // HEAD <-> index: a staged change.
-                StatusItem::TreeIndex(_) => {
-                    if Status::Staged > status {
-                        status = Status::Staged;
-                    }
-                }
+                // HEAD <-> index: a staged change. Unstaged changes short-circuit
+                // above, so staged is the highest status this loop can settle on.
+                StatusItem::TreeIndex(_) => status = Status::Staged,
                 // index <-> worktree: an unstaged change.
                 StatusItem::IndexWorktree(IndexWorktreeItem::Modification {
                     status: entry,
