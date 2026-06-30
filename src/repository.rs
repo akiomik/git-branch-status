@@ -71,7 +71,7 @@ impl Repository {
         };
 
         match state {
-            Some(state) => Ok(branch + ":" + Self::action(&state)),
+            Some(state) => Ok(branch + ":" + state.label()),
             None => Ok(branch),
         }
     }
@@ -142,22 +142,6 @@ impl Repository {
         Ok(index.entries().iter().any(|entry| entry.stage_raw() != 0))
     }
 
-    /// Map an in-progress operation to the suffix shown after the branch name.
-    const fn action(state: &InProgress) -> &'static str {
-        match state {
-            InProgress::ApplyMailbox => "am",
-            InProgress::ApplyMailboxRebase => "am/rebase",
-            InProgress::Bisect => "bisect",
-            InProgress::CherryPick => "cherry",
-            InProgress::CherryPickSequence => "cherry-seq",
-            InProgress::Merge => "merge",
-            InProgress::Rebase => "rebase",
-            InProgress::RebaseInteractive => "rebase-i",
-            InProgress::Revert => "revert",
-            InProgress::RevertSequence => "revert-seq",
-        }
-    }
-
     /// The original branch name recorded by an in-progress rebase, if any.
     ///
     /// The merge backend (and interactive rebases) use `rebase-merge/`, while the
@@ -209,6 +193,29 @@ impl Repository {
 
     fn shorthand(name: &FullNameRef) -> String {
         name.shorten().to_string()
+    }
+}
+
+/// Extension methods on [`gix::state::InProgress`] for display purposes.
+trait InProgressExt {
+    /// A short, human-readable label for the in-progress action (e.g. `"rebase-i"`).
+    fn label(&self) -> &'static str;
+}
+
+impl InProgressExt for InProgress {
+    fn label(&self) -> &'static str {
+        match self {
+            Self::ApplyMailbox => "am",
+            Self::ApplyMailboxRebase => "am/rebase",
+            Self::Bisect => "bisect",
+            Self::CherryPick => "cherry",
+            Self::CherryPickSequence => "cherry-seq",
+            Self::Merge => "merge",
+            Self::Rebase => "rebase",
+            Self::RebaseInteractive => "rebase-i",
+            Self::Revert => "revert",
+            Self::RevertSequence => "revert-seq",
+        }
     }
 }
 
