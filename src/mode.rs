@@ -30,7 +30,7 @@ impl Mode {
             Status::Staged => Yellow,
             Status::Unstaged | Status::Conflicted => Red,
         };
-        format!("{}", color.paint(branch.name.clone()))
+        format!("{}", color.paint(branch.name.as_str()))
     }
 
     fn format_zsh(branch: &Branch) -> String {
