@@ -70,8 +70,8 @@ impl Repository {
             }
         };
 
-        match Self::action(state) {
-            Some(action) => Ok(branch + ":" + action),
+        match state {
+            Some(state) => Ok(branch + ":" + Self::action(&state)),
             None => Ok(branch),
         }
     }
@@ -143,18 +143,18 @@ impl Repository {
     }
 
     /// Map an in-progress operation to the suffix shown after the branch name.
-    fn action(state: Option<InProgress>) -> Option<&'static str> {
-        match state? {
-            InProgress::ApplyMailbox => Some("am"),
-            InProgress::ApplyMailboxRebase => Some("am/rebase"),
-            InProgress::Bisect => Some("bisect"),
-            InProgress::CherryPick => Some("cherry"),
-            InProgress::CherryPickSequence => Some("cherry-seq"),
-            InProgress::Merge => Some("merge"),
-            InProgress::Rebase => Some("rebase"),
-            InProgress::RebaseInteractive => Some("rebase-i"),
-            InProgress::Revert => Some("revert"),
-            InProgress::RevertSequence => Some("revert-seq"),
+    const fn action(state: &InProgress) -> &'static str {
+        match state {
+            InProgress::ApplyMailbox => "am",
+            InProgress::ApplyMailboxRebase => "am/rebase",
+            InProgress::Bisect => "bisect",
+            InProgress::CherryPick => "cherry",
+            InProgress::CherryPickSequence => "cherry-seq",
+            InProgress::Merge => "merge",
+            InProgress::Rebase => "rebase",
+            InProgress::RebaseInteractive => "rebase-i",
+            InProgress::Revert => "revert",
+            InProgress::RevertSequence => "revert-seq",
         }
     }
 
