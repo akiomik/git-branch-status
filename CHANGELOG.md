@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Escape `%` characters in branch names when formatting for zsh (`--mode zsh`).
+  Without this, a branch named e.g. `feature/%n` would cause zsh to expand `%n`
+  to the login name inside `$PROMPT`, producing incorrect output.
+
 ## [0.2.1] - 2026-06-30
 
 ### Changed
