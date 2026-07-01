@@ -17,7 +17,7 @@ use clap::ValueEnum;
 
 use crate::branch::{Branch, Status};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, ValueEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, ValueEnum)]
 pub enum Mode {
     Stdout,
     Zsh,
