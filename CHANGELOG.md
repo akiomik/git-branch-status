@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ApplyMailboxRebase`). Reading it unconditionally could silently suppress the
   action label or show a stale name from a previous rebase. When a rebase is
   active but the file is absent, the display now falls back to HEAD gracefully.
+- When a ref recorded in `head-name` cannot be found in the repository (e.g.
+  the branch was deleted mid-rebase), the shorthand fallback now strips
+  `refs/remotes/` and `refs/tags/` in addition to `refs/heads/`, instead of
+  returning the full ref name verbatim.
 
 ## [0.2.1] - 2026-06-30
 

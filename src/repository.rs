@@ -197,15 +197,19 @@ impl Repository {
     }
 
     /// Resolve a full ref name to its shorthand, prettifying via the ref store
-    /// when possible and otherwise stripping the `refs/heads/` prefix.
+    /// when possible and otherwise stripping the well-known namespace prefix.
     fn shorthand_of_ref(&self, refname: &str) -> String {
         if let Ok(reference) = self.0.find_reference(refname) {
             return reference.name().shorten().to_string();
         }
-        refname
-            .strip_prefix("refs/heads/")
-            .unwrap_or(refname)
-            .to_string()
+        // Ref not found (e.g. branch deleted mid-rebase): strip the namespace
+        // prefix as a best-effort shorthand.
+        for prefix in ["refs/heads/", "refs/remotes/", "refs/tags/"] {
+            if let Some(short) = refname.strip_prefix(prefix) {
+                return short.to_string();
+            }
+        }
+        refname.to_string()
     }
 
     fn shorthand(name: &FullNameRef) -> String {
@@ -368,6 +372,29 @@ mod tests {
         dir.child(".git/rebase-apply/head-name")
             .write_str("refs/heads/feature\n")?;
         assert_eq!(open(&dir)?.branch_name()?, "feature:am/rebase");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_shortens_remote_ref_from_head_name_when_ref_not_found() -> Result<()> {
+        let dir = init_repo()?;
+        // head-name records a remote-tracking ref; the remote does not exist in
+        // this repo so find_reference fails. The fallback must strip
+        // "refs/remotes/" rather than returning the full ref verbatim.
+        dir.child(".git/rebase-apply/head-name")
+            .write_str("refs/remotes/origin/main\n")?;
+        assert_eq!(open(&dir)?.branch_name()?, "origin/main:am/rebase");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_shortens_tag_ref_from_head_name_when_ref_not_found() -> Result<()> {
+        let dir = init_repo()?;
+        // head-name records a tag ref that does not exist in this repo;
+        // the fallback must strip "refs/tags/" rather than returning the full ref.
+        dir.child(".git/rebase-apply/head-name")
+            .write_str("refs/tags/v1.0.0\n")?;
+        assert_eq!(open(&dir)?.branch_name()?, "v1.0.0:am/rebase");
         dir.close().map_err(Into::into)
     }
 
