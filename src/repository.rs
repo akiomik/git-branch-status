@@ -173,6 +173,11 @@ impl Repository {
     }
 
     /// A tag pointing exactly at HEAD, behaving like `git describe --exact-match`.
+    ///
+    /// When multiple tags point to the same commit the choice is made by gix
+    /// internals (annotated tags before lightweight, then reverse-alphabetical
+    /// by name). This matches `git describe --exact-match` behaviour, which
+    /// also does not guarantee a stable winner among ties.
     fn tag_name(&self) -> Option<String> {
         let commit = self.0.head_commit().ok()?;
         let format = commit
