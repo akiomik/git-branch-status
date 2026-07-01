@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ansi_term::Colour::{Green, Red, Yellow};
 use clap::ValueEnum;
+use owo_colors::OwoColorize as _;
 
 use crate::branch::{Branch, Status};
 
@@ -25,12 +25,11 @@ pub enum Mode {
 
 impl Mode {
     fn format_stdout(branch: &Branch) -> String {
-        let color = match branch.status {
-            Status::NotChanged => Green,
-            Status::Staged => Yellow,
-            Status::Unstaged | Status::Conflicted => Red,
-        };
-        format!("{}", color.paint(branch.name.as_str()))
+        match branch.status {
+            Status::NotChanged => format!("{}", branch.name.green()),
+            Status::Staged => format!("{}", branch.name.yellow()),
+            Status::Unstaged | Status::Conflicted => format!("{}", branch.name.red()),
+        }
     }
 
     fn format_zsh(branch: &Branch) -> String {
@@ -54,6 +53,8 @@ impl Mode {
 
 #[cfg(test)]
 mod tests {
+    use owo_colors::OwoColorize as _;
+
     use super::*;
 
     #[test]
@@ -63,7 +64,7 @@ mod tests {
             status: Status::NotChanged,
         };
         let actual = Mode::Stdout.format(&branch);
-        assert_eq!(actual, format!("{}", Green.paint("main")));
+        assert_eq!(actual, format!("{}", "main".green()));
     }
 
     #[test]
@@ -73,7 +74,7 @@ mod tests {
             status: Status::Staged,
         };
         let actual = Mode::Stdout.format(&branch);
-        assert_eq!(actual, format!("{}", Yellow.paint("main")));
+        assert_eq!(actual, format!("{}", "main".yellow()));
     }
 
     #[test]
@@ -83,7 +84,7 @@ mod tests {
             status: Status::Unstaged,
         };
         let actual = Mode::Stdout.format(&branch);
-        assert_eq!(actual, format!("{}", Red.paint("main")));
+        assert_eq!(actual, format!("{}", "main".red()));
     }
 
     #[test]
@@ -93,7 +94,7 @@ mod tests {
             status: Status::Conflicted,
         };
         let actual = Mode::Stdout.format(&branch);
-        assert_eq!(actual, format!("{}", Red.paint("main")));
+        assert_eq!(actual, format!("{}", "main".red()));
     }
 
     #[test]
