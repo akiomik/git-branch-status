@@ -19,7 +19,6 @@ use gix::bstr::BString;
 use gix::commit::describe::SelectRef;
 use gix::head::Kind::{Detached, Symbolic, Unborn};
 use gix::progress::Discard;
-use gix::refs::FullNameRef;
 use gix::state::InProgress;
 use gix::status::index_worktree::Item as IndexWorktreeItem;
 use gix::status::plumbing::index_as_worktree::EntryStatus;
@@ -71,7 +70,7 @@ impl Repository {
         }
         .unwrap_or_else(|| match &head.kind {
             Symbolic(reference) => reference.name.shorten().to_string(),
-            Unborn(name) => Self::shorthand(name.as_ref()),
+            Unborn(name) => name.shorten().to_string(),
             Detached { target, .. } => {
                 // Prefer a tag pointing at HEAD, falling back to the short hash.
                 self.tag_name()
@@ -215,10 +214,6 @@ impl Repository {
             }
         }
         refname.to_string()
-    }
-
-    fn shorthand(name: &FullNameRef) -> String {
-        name.shorten().to_string()
     }
 }
 
