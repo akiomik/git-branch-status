@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ignore an empty or whitespace-only `rebase-merge/head-name` or
   `rebase-apply/head-name` file instead of returning an empty branch name.
   A partially-written or corrupted file now falls back to the real HEAD.
+- Only read the `head-name` file to recover the original branch name when gix
+  confirms a rebase is in progress (`Rebase`, `RebaseInteractive`, or
+  `ApplyMailboxRebase`). Reading it unconditionally could silently suppress the
+  action label or show a stale name from a previous rebase. When a rebase is
+  active but the file is absent, the display now falls back to HEAD gracefully.
 
 ## [0.2.1] - 2026-06-30
 
