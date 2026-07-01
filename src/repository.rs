@@ -132,9 +132,14 @@ impl Repository {
                     // Stat-only refresh or `--intent-to-add`: nothing changed.
                     EntryStatus::NeedsUpdate(_) | EntryStatus::IntentToAdd => {}
                 },
-                // Rewrites are disabled above, but were one to slip through it
-                // would still be an unstaged worktree change.
+                // Rewrites are disabled above. The debug assertion catches any
+                // future gix version that emits them despite the opt-out, while
+                // the return keeps release builds correct if one slips through.
                 StatusItem::IndexWorktree(IndexWorktreeItem::Rewrite { .. }) => {
+                    debug_assert!(
+                        false,
+                        "index_worktree_rewrites(None) is set; a Rewrite item should never be emitted"
+                    );
                     return Ok(Status::Unstaged);
                 }
                 // Untracked entries are excluded by `UntrackedFiles::None`.
