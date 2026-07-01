@@ -266,9 +266,11 @@ mod tests {
     }
 
     fn git_stdout(dir: &Path, args: &[&str]) -> Result<String> {
+        let mut full = vec!["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"];
+        full.extend_from_slice(args);
         let cmd = Command::new("git")
             .current_dir(dir)
-            .args(args)
+            .args(&full)
             .assert()
             .success();
         let out = cmd.get_output().to_owned();
