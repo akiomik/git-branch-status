@@ -39,7 +39,8 @@ impl Mode {
             Status::Staged => "yellow",
             Status::Unstaged | Status::Conflicted => "red",
         };
-        format!("%F{{{color}}}{}%f", branch.name)
+        let name = branch.name.replace('%', "%%");
+        format!("%F{{{color}}}{name}%f")
     }
 
     #[must_use]
@@ -133,5 +134,25 @@ mod tests {
         };
         let actual = Mode::Zsh.format(&branch);
         assert_eq!(actual, "%F{red}main%f");
+    }
+
+    #[test]
+    fn test_zsh_escapes_percent_in_branch_name() {
+        let branch = Branch {
+            name: "feature/%n".to_owned(),
+            status: Status::NotChanged,
+        };
+        let actual = Mode::Zsh.format(&branch);
+        assert_eq!(actual, "%F{green}feature/%%n%f");
+    }
+
+    #[test]
+    fn test_zsh_escapes_trailing_percent_in_branch_name() {
+        let branch = Branch {
+            name: "main%".to_owned(),
+            status: Status::NotChanged,
+        };
+        let actual = Mode::Zsh.format(&branch);
+        assert_eq!(actual, "%F{green}main%%%f");
     }
 }
