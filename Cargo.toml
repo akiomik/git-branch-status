@@ -1,6 +1,6 @@
 [package]
 name = "git-branch-status"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Akiomi Kamakura <akiomik@gmail.com>"]
 edition = "2024"
 rust-version = "1.85"
