@@ -37,6 +37,10 @@ fn main() {
 
     match run(cli) {
         Ok(output) => print!("{output}"),
+        // Intentionally silent: any output on stderr would appear in the
+        // terminal when this tool is invoked inside a shell prompt via $().
+        // A non-zero exit code is the only signal we can emit without
+        // polluting the prompt.
         Err(_) => exit(1),
     }
 }
