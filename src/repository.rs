@@ -49,19 +49,38 @@ impl Repository {
     ///
     /// Returns an error if the HEAD reference cannot be resolved.
     pub fn branch_name(&self) -> Result<String, Error> {
-        let head = self.0.head()?;
         let state = self.0.state();
 
         // Only consult the on-disk head-name file when gix independently
         // confirms a rebase is in progress. Reading it unconditionally can
         // produce a stale branch name if the file was left behind after an
         // aborted rebase while gix no longer detects any rebase state.
-        let branch = if state.as_ref().is_some_and(InProgressExt::is_rebase) {
-            self.rebase_head_name()
-        } else {
-            None
+        let rebase_name = state
+            .as_ref()
+            .filter(|state| state.is_rebase())
+            .and_then(|_| self.rebase_head_name());
+
+        let branch = match rebase_name {
+            Some(name) => name,
+            None => self.name_from_head()?,
+        };
+
+        match state {
+            Some(state) => Ok(branch + ":" + state.label()),
+            None => Ok(branch),
         }
-        .unwrap_or_else(|| match &head.kind {
+    }
+
+    /// The display name derived from HEAD: the shorthand of a symbolic or unborn
+    /// ref, or for a detached HEAD a tag pointing at it, falling back to the
+    /// short hash.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HEAD reference cannot be resolved.
+    fn name_from_head(&self) -> Result<String, Error> {
+        let head = self.0.head()?;
+        Ok(match &head.kind {
             Symbolic(reference) => reference.name.shorten().to_string(),
             Unborn(name) => name.shorten().to_string(),
             Detached { target, .. } => {
@@ -70,12 +89,7 @@ impl Repository {
                     .or_else(|| self.short_id(*target))
                     .unwrap_or_else(|| "HEAD (detached)".to_string())
             }
-        });
-
-        match state {
-            Some(state) => Ok(branch + ":" + state.label()),
-            None => Ok(branch),
-        }
+        })
     }
 
     /// The worst status across the working tree, ignoring untracked files.
