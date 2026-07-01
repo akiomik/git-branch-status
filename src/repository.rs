@@ -154,7 +154,9 @@ impl Repository {
             let path = git_dir.join(dir).join("head-name");
             if let Ok(content) = fs::read_to_string(&path) {
                 let refname = content.trim();
-                return Some(self.shorthand_of_ref(refname));
+                if !refname.is_empty() {
+                    return Some(self.shorthand_of_ref(refname));
+                }
             }
         }
         None
@@ -340,6 +342,28 @@ mod tests {
             .write_str("refs/heads/feature\n")?;
         dir.child(".git/rebase-apply/rebasing").touch()?;
         assert_eq!(open(&dir)?.branch_name()?, "feature:rebase");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_ignores_empty_rebase_merge_head_name() -> Result<()> {
+        let dir = init_repo()?;
+        // An empty head-name file (e.g. from a partial write or filesystem
+        // corruption) must not override HEAD: the tool should fall back to the
+        // real symbolic HEAD ("main") rather than returning "" or ":rebase-i".
+        dir.child(".git/rebase-merge/head-name").write_str("")?;
+        dir.child(".git/rebase-merge/interactive").touch()?;
+        assert_eq!(open(&dir)?.branch_name()?, "main:rebase-i");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_ignores_whitespace_only_rebase_apply_head_name() -> Result<()> {
+        let dir = init_repo()?;
+        dir.child(".git/rebase-apply/head-name")
+            .write_str("   \n")?;
+        dir.child(".git/rebase-apply/rebasing").touch()?;
+        assert_eq!(open(&dir)?.branch_name()?, "main:rebase");
         dir.close().map_err(Into::into)
     }
 

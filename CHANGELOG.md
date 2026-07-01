@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Escape `%` characters in branch names when formatting for zsh (`--mode zsh`).
   Without this, a branch named e.g. `feature/%n` would cause zsh to expand `%n`
   to the login name inside `$PROMPT`, producing incorrect output.
+- Ignore an empty or whitespace-only `rebase-merge/head-name` or
+  `rebase-apply/head-name` file instead of returning an empty branch name.
+  A partially-written or corrupted file now falls back to the real HEAD.
 
 ## [0.2.1] - 2026-06-30
 
