@@ -53,22 +53,32 @@ impl Repository {
         let head = self.0.head()?;
         let state = self.0.state();
 
-        let branch = if let Some(name) = self.rebase_head_name() {
-            // A rebase records the original branch name on disk; prefer it over
-            // the detached HEAD that a rebase leaves behind.
-            name
+        // Only consult the on-disk head-name file when gix independently
+        // confirms a rebase is in progress. Reading it unconditionally can
+        // produce a stale branch name if the file was left behind after an
+        // aborted rebase while gix no longer detects any rebase state.
+        let is_rebase = matches!(
+            state,
+            Some(
+                InProgress::Rebase | InProgress::RebaseInteractive | InProgress::ApplyMailboxRebase
+            )
+        );
+
+        let branch = if is_rebase {
+            self.rebase_head_name()
         } else {
-            match &head.kind {
-                Symbolic(reference) => reference.name.shorten().to_string(),
-                Unborn(name) => Self::shorthand(name.as_ref()),
-                Detached { target, .. } => {
-                    // Prefer a tag pointing at HEAD, falling back to the short hash.
-                    self.tag_name()
-                        .or_else(|| self.short_id(*target))
-                        .unwrap_or_else(|| "HEAD (detached)".to_string())
-                }
+            None
+        }
+        .unwrap_or_else(|| match &head.kind {
+            Symbolic(reference) => reference.name.shorten().to_string(),
+            Unborn(name) => Self::shorthand(name.as_ref()),
+            Detached { target, .. } => {
+                // Prefer a tag pointing at HEAD, falling back to the short hash.
+                self.tag_name()
+                    .or_else(|| self.short_id(*target))
+                    .unwrap_or_else(|| "HEAD (detached)".to_string())
             }
-        };
+        });
 
         match state {
             Some(state) => Ok(branch + ":" + state.label()),
@@ -342,6 +352,35 @@ mod tests {
             .write_str("refs/heads/feature\n")?;
         dir.child(".git/rebase-apply/rebasing").touch()?;
         assert_eq!(open(&dir)?.branch_name()?, "feature:rebase");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_uses_rebase_apply_head_name_during_am_rebase() -> Result<()> {
+        let dir = init_repo()?;
+        // gix infers ApplyMailboxRebase from the presence of head-name alone;
+        // the branch name must be read from that file.
+        dir.child(".git/rebase-apply/head-name")
+            .write_str("refs/heads/feature\n")?;
+        assert_eq!(open(&dir)?.branch_name()?, "feature:am/rebase");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_falls_back_to_head_when_rebase_apply_head_name_absent() -> Result<()> {
+        let dir = init_repo()?;
+        // gix detects Rebase but head-name is missing; fall back to the real HEAD.
+        dir.child(".git/rebase-apply/rebasing").touch()?;
+        assert_eq!(open(&dir)?.branch_name()?, "main:rebase");
+        dir.close().map_err(Into::into)
+    }
+
+    #[test]
+    fn branch_name_falls_back_to_head_when_rebase_merge_head_name_absent() -> Result<()> {
+        let dir = init_repo()?;
+        // gix detects RebaseInteractive but head-name is missing; fall back to the real HEAD.
+        dir.child(".git/rebase-merge/interactive").touch()?;
+        assert_eq!(open(&dir)?.branch_name()?, "main:rebase-i");
         dir.close().map_err(Into::into)
     }
 
