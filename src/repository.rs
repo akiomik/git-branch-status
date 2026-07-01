@@ -56,14 +56,7 @@ impl Repository {
         // confirms a rebase is in progress. Reading it unconditionally can
         // produce a stale branch name if the file was left behind after an
         // aborted rebase while gix no longer detects any rebase state.
-        let is_rebase = matches!(
-            state,
-            Some(
-                InProgress::Rebase | InProgress::RebaseInteractive | InProgress::ApplyMailboxRebase
-            )
-        );
-
-        let branch = if is_rebase {
+        let branch = if state.as_ref().is_some_and(InProgressExt::is_rebase) {
             self.rebase_head_name()
         } else {
             None
@@ -221,6 +214,9 @@ impl Repository {
 trait InProgressExt {
     /// A short, human-readable label for the in-progress action (e.g. `"rebase-i"`).
     fn label(&self) -> &'static str;
+
+    /// Whether this state is a rebase variant (plain, interactive, or am/rebase).
+    fn is_rebase(&self) -> bool;
 }
 
 impl InProgressExt for InProgress {
@@ -237,6 +233,13 @@ impl InProgressExt for InProgress {
             Self::Revert => "revert",
             Self::RevertSequence => "revert-seq",
         }
+    }
+
+    fn is_rebase(&self) -> bool {
+        matches!(
+            self,
+            Self::Rebase | Self::RebaseInteractive | Self::ApplyMailboxRebase
+        )
     }
 }
 
