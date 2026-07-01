@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replace the abandoned `ansi_term` dependency with `owo-colors`. The visible
+  output is identical; `owo-colors` is actively maintained and supports the
+  `NO_COLOR` convention.
+
 ### Fixed
 
 - Escape `%` characters in branch names when formatting for zsh (`--mode zsh`).
