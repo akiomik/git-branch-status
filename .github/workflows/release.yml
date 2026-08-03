@@ -52,7 +52,7 @@ jobs:
         if: "!matrix.use-cross"
         run: rustup target add ${{ matrix.target }}
 
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@v2.85.5
         if: matrix.use-cross
         with:
           tool: cross
