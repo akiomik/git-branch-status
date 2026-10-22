@@ -10,8 +10,16 @@ permissions:
   contents: write
 
 jobs:
+  validate-tag:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/validate-release-tag.sh "$GITHUB_REF_NAME"
+
   build:
     name: Build ${{ matrix.target }}
+    needs: validate-tag
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
