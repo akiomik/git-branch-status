@@ -18,6 +18,7 @@ jobs:
       uses: actions-rust-lang/setup-rust-toolchain@v2
       with:
         cache: false
+        build-warnings: ''
         components: rustfmt, clippy
     - uses: actions/cache@v6
       with:

@@ -41,6 +41,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache: false
+          build-warnings: ''
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -104,6 +105,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache: false
+          build-warnings: ''
       - uses: Swatinem/rust-cache@v2
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
