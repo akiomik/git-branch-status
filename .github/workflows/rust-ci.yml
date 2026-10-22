@@ -15,9 +15,9 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: actions-rust-lang/setup-rust-toolchain@v2
       with:
-        toolchain: 1.91.0
+        cache: false
         components: rustfmt, clippy
     - uses: actions/cache@v6
       with:
