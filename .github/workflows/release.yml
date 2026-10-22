@@ -38,14 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
 
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
 
-      # Install the target explicitly instead of relying on dtolnay/rust-toolchain's `targets`
-      # parameter, which does not reliably install cross-compilation targets on macOS ARM64
+      # Install the target explicitly for native cross-compilation on macOS ARM64
       # runners (e.g. x86_64-apple-darwin on macos-latest). Not needed for cross builds since
       # cross compiles inside a Docker container that manages its own toolchain.
       - name: Add Rust target
@@ -100,7 +101,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
       - uses: Swatinem/rust-cache@v2
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
