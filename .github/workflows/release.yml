@@ -42,11 +42,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          # A Linux binary needs at least the glibc it was built against, so
+          # both Linux targets build on 22.04 (glibc 2.35) rather than on
+          # ubuntu-latest, to keep running on Ubuntu 22.04 and Debian 12.
+          # Revisit when GitHub retires these runners.
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          # Built natively on an ARM runner rather than with cross, so the
-          # binary links against the runner's glibc, as the x86_64 one does.
-          - os: ubuntu-24.04-arm
+          # Built natively on an ARM runner rather than with cross.
+          - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
