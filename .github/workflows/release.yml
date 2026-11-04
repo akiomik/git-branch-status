@@ -24,7 +24,7 @@ jobs:
       - name: Check that the tag matches the package version
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml)"
+          version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')"
           if [ "$tag" != "$version" ]; then
             echo "tag v${tag} does not match package version ${version}" >&2
             exit 1
@@ -90,7 +90,8 @@ jobs:
           name: binary-${{ matrix.target }}
           path: git-branch-status-${{ github.ref_name }}-${{ matrix.target }}.*
           if-no-files-found: error
-          retention-days: 1
+          # Long enough to re-run the release job after a failed upload.
+          retention-days: 7
 
   # Uploads the packaged binaries in one go. This is the only job that can
   # write to the repository, so it runs no build and no third-party action:
@@ -134,10 +135,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+          if error="$(gh release view "$GITHUB_REF_NAME" 2>&1 > /dev/null)"; then
             gh release upload "$GITHUB_REF_NAME" dist/*
-          else
+          elif [ "$error" = "release not found" ]; then
             gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes "" dist/*
+          else
+            echo "$error" >&2
+            exit 1
           fi
 
   # Packs the same commit again and uploads it without compiling. Any step
